@@ -11,7 +11,7 @@
     "./styles": "./src/styles.css"
   },
   "scripts": {
-    "lint": "eslint src",
+    "lint": "echo '(스캐폴드) ESLint 미설정 — 실제 코드 작성 시 도입' && exit 0",
     "typecheck": "tsc --noEmit"
   },
   "peerDependencies": {

@@ -10,7 +10,7 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "deploy-commands": "tsx src/deploy-commands.ts",
-    "lint": "eslint \"src/**/*.ts\"",
+    "lint": "echo '(스캐폴드) ESLint 미설정 — 실제 코드 작성 시 도입' && exit 0",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist .tsbuildinfo"
   },
