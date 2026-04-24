@@ -11,7 +11,7 @@
  *   - callbacks.session → Supabase JWT 서명 추가 (RLS 통과용)
  *   - 사용자 handle 자동 발급 (handle 충돌 시 6자 suffix)
  */
-import NextAuth, { type NextAuthConfig } from 'next-auth';
+import NextAuth, { type NextAuthConfig, type NextAuthResult } from 'next-auth';
 import Discord from 'next-auth/providers/discord';
 // import { SupabaseAdapter } from '@auth/supabase-adapter';
 
@@ -65,4 +65,10 @@ export const authConfig: NextAuthConfig = {
   },
 };
 
-export const { handlers, signIn, signOut, auth } = NextAuth(authConfig);
+// 모노레포 환경에서 destructure 시 signIn 타입 추론이 @auth/core 내부 경로를 참조하는 문제를
+// 회피하기 위해 중간 상수에 NextAuthResult 어노테이션 후 개별 export 로 재발행.
+const nextAuth: NextAuthResult = NextAuth(authConfig);
+export const handlers: NextAuthResult['handlers'] = nextAuth.handlers;
+export const signIn: NextAuthResult['signIn'] = nextAuth.signIn;
+export const signOut: NextAuthResult['signOut'] = nextAuth.signOut;
+export const auth: NextAuthResult['auth'] = nextAuth.auth;

@@ -13,6 +13,7 @@
     "clean": "rm -rf .next .turbo node_modules"
   },
   "dependencies": {
+    "@auth/core": "^0.37.2",
     "@auth/supabase-adapter": "^1.4.0",
     "@supabase/ssr": "^0.5.2",
     "@supabase/supabase-js": "^2.46.0",

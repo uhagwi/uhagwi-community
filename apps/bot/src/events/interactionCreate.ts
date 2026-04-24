@@ -4,7 +4,7 @@
  * 커맨드 이름으로 commandMap 에서 조회 → execute 호출.
  * 핸들러 내부 에러는 여기서 최종 캐치하여 사용자에게 일반 메시지만 보여준다.
  */
-import { Events, Interaction, MessageFlags } from "discord.js";
+import { Events, type Interaction, type InteractionReplyOptions, MessageFlags } from "discord.js";
 import { commandMap } from "../commands/index.js";
 import { logger } from "../logger.js";
 
@@ -27,7 +27,7 @@ export async function execute(interaction: Interaction): Promise<void> {
       { err, command: interaction.commandName, user: interaction.user.id },
       "커맨드 실행 중 예외",
     );
-    const reply = {
+    const reply: InteractionReplyOptions = {
       content: "처리 중 문제가 생겼어요. 잠시 후 다시 시도해 주세요.",
       flags: MessageFlags.Ephemeral,
     };
