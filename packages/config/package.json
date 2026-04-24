@@ -1,0 +1,14 @@
+{
+  "name": "@uhagwi/config",
+  "version": "0.1.0",
+  "private": true,
+  "description": "우하귀 공유 설정 (tsconfig, eslint, tailwind 프리셋)",
+  "files": ["tsconfig/", "eslint/", "tailwind/"],
+  "exports": {
+    "./tsconfig/base.json": "./tsconfig/base.json",
+    "./tsconfig/nextjs.json": "./tsconfig/nextjs.json",
+    "./tsconfig/node.json": "./tsconfig/node.json",
+    "./eslint/base.js": "./eslint/base.js",
+    "./tailwind/preset.js": "./tailwind/preset.js"
+  }
+}

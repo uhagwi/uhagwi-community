@@ -1,0 +1,79 @@
+/**
+ * 우하귀 전역 스타일
+ * 근거: docs/service-dev/02_design/ui.md §3 디자인 토큰 · §6 접근성
+ */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* 컬러 토큰 (ui.md §3-1) */
+  --color-primary: #5b3fa8;
+  --color-primary-ink: #2e1f5e;
+  --color-cream: #faf5ea;
+  --color-cream-sub: #f1e9d6;
+  --color-mint: #a8e6d0;
+  --color-hotpink: #ff5c9a;
+  --color-ink-900: #1a1622;
+  --color-ink-600: #5b5370;
+  --color-ink-300: #c9c2d4;
+  --color-danger: #d64545;
+  --color-success: #3bb273;
+
+  /* 그림자 (ui.md §3-4) */
+  --shadow-card: 0 2px 8px rgba(46, 31, 94, 0.08);
+  --shadow-pop: 0 6px 24px rgba(255, 92, 154, 0.22);
+}
+
+@layer base {
+  html {
+    /* 한국어 가독성 기본값 */
+    word-break: keep-all;
+    overflow-wrap: break-word;
+  }
+
+  body {
+    background: var(--color-cream);
+    color: var(--color-ink-900);
+    font-family: 'Pretendard Variable', Pretendard, system-ui, -apple-system, sans-serif;
+    line-height: 1.65;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  /* prefers-reduced-motion 존중 (ui.md §6) */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer components {
+  /* Primary CTA — 딥퍼플 채움 */
+  .btn-primary {
+    @apply inline-flex items-center justify-center rounded-[10px] bg-brand-600 px-5 py-3 font-semibold text-white shadow-card transition hover:bg-brand-700 focus-visible:ring-2 focus-visible:ring-brand-400;
+  }
+
+  /* Ghost CTA — 크림 + 딥퍼플 테두리 */
+  .btn-ghost {
+    @apply inline-flex items-center justify-center rounded-[10px] border border-brand-600 bg-cream-50 px-5 py-3 font-semibold text-brand-700 transition hover:bg-brand-50;
+  }
+
+  .card {
+    @apply rounded-card bg-white p-4 shadow-card;
+  }
+
+  .tag-chip {
+    @apply inline-flex items-center rounded-pill bg-mint-400/30 px-3 py-1 text-sm text-brand-800 transition hover:bg-mint-400/60;
+  }
+}

@@ -1,0 +1,36 @@
+# 의존성
+node_modules/
+.pnpm-store/
+
+# 빌드 산출물
+.next/
+out/
+dist/
+build/
+coverage/
+*.tsbuildinfo
+
+# 환경변수 (절대 커밋 금지)
+.env
+.env.local
+.env.*.local
+
+# 로그·캐시
+*.log
+.turbo/
+.vercel/
+.cache/
+
+# IDE
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Supabase 로컬
+supabase/.branches/
+supabase/.temp/

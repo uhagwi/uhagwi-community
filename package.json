@@ -1,0 +1,30 @@
+{
+  "name": "uhagwi",
+  "version": "0.1.0",
+  "private": true,
+  "description": "우하귀 — AI 하네스 공유 커뮤니티 (Uhagwi: 우리 하네스 귀엽지)",
+  "packageManager": "pnpm@10.33.2",
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "clean": "turbo run clean && rm -rf node_modules",
+    "format": "prettier --write \"**/*.{ts,tsx,md,json,sql}\""
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "prettier": "^3.4.0",
+    "turbo": "^2.3.0",
+    "typescript": "^5.7.0"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ]
+}

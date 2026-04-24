@@ -1,0 +1,70 @@
+# 우하귀 Supabase 로컬 개발 설정
+# 참조: https://supabase.com/docs/guides/local-development/cli/config
+
+project_id = "uhagwi"
+
+[api]
+# REST/GraphQL API 엔드포인트
+enabled = true
+port = 54321
+schemas = ["public", "storage", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+# Postgres 15 (Supabase 기본)
+port = 54322
+shadow_port = 54320
+major_version = 15
+
+[db.pooler]
+enabled = false
+port = 54329
+pool_mode = "transaction"
+default_pool_size = 20
+max_client_conn = 100
+
+[studio]
+# Supabase Studio 대시보드
+enabled = true
+port = 54323
+api_url = "http://127.0.0.1:54321"
+
+[inbucket]
+# 로컬 이메일 테스트 (Discord OAuth는 별도이므로 참고용)
+enabled = true
+port = 54324
+
+[storage]
+enabled = true
+file_size_limit = "50MiB"
+
+[auth]
+# Supabase Auth — Discord OAuth 연동 대상
+enabled = true
+site_url = "http://127.0.0.1:3000"
+additional_redirect_urls = ["http://127.0.0.1:3000/**"]
+jwt_expiry = 3600
+enable_signup = true
+enable_anonymous_sign_ins = false
+
+[auth.email]
+enable_signup = false
+double_confirm_changes = true
+enable_confirmations = false
+
+# Discord OAuth (로컬에서는 비활성, 프로덕션에서 활성화)
+[auth.external.discord]
+enabled = false
+client_id = "env(SUPABASE_AUTH_DISCORD_CLIENT_ID)"
+secret = "env(SUPABASE_AUTH_DISCORD_SECRET)"
+redirect_uri = "http://127.0.0.1:54321/auth/v1/callback"
+
+[edge_runtime]
+enabled = true
+policy = "oneshot"
+inspector_port = 8083
+
+[analytics]
+enabled = false
+port = 54327
