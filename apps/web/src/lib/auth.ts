@@ -16,6 +16,9 @@ import Discord from 'next-auth/providers/discord';
 // import { SupabaseAdapter } from '@auth/supabase-adapter';
 
 export const authConfig: NextAuthConfig = {
+  // Vercel preview·prod 도메인 허용 (NextAuth v5 베타에서 명시 권장)
+  trustHost: true,
+  secret: process.env.NEXTAUTH_SECRET,
   // TODO: adapter 활성화 — DB 마이그레이션 0001 적용 후
   // adapter: SupabaseAdapter({
   //   url: process.env.SUPABASE_URL!,
@@ -25,7 +28,8 @@ export const authConfig: NextAuthConfig = {
     Discord({
       clientId: process.env.DISCORD_CLIENT_ID,
       clientSecret: process.env.DISCORD_CLIENT_SECRET,
-      authorization: { params: { scope: 'identify email guilds.join' } },
+      // MVP: identify+email 만 사용. guilds.join 은 봇 연결 후 추가 예정.
+      authorization: { params: { scope: 'identify email' } },
     }),
   ],
   session: {
