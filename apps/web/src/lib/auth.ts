@@ -1,76 +1,28 @@
 /**
- * NextAuth v5 설정 — Discord Provider + Supabase Adapter
- * 근거: docs/service-dev/02_design/api.md §1-3, §2-1
- *
- * - 세션: JWE 쿠키 (SameSite=Lax, Secure, HttpOnly)
- * - JWT `sub` claim = users.id → Supabase RLS 의 auth.uid()
- * - Discord scope: identify email guilds.join
- *
- * TODO: 구현
- *   - SupabaseAdapter 연결 시 service_role 키로 접근
- *   - callbacks.session → Supabase JWT 서명 추가 (RLS 통과용)
- *   - 사용자 handle 자동 발급 (handle 충돌 시 6자 suffix)
+ * NextAuth v5 설정 — Discord Provider (MVP 미니멀)
+ * Configuration 에러 진단 위해 미니멀 설정으로 시작.
+ * 안정화 후 callbacks · pages · adapter 단계적으로 추가.
  */
 import NextAuth, { type NextAuthConfig, type NextAuthResult } from 'next-auth';
 import Discord from 'next-auth/providers/discord';
-// import { SupabaseAdapter } from '@auth/supabase-adapter';
 
 export const authConfig: NextAuthConfig = {
-  // Vercel preview·prod 도메인 허용 (NextAuth v5 베타에서 명시 권장)
   trustHost: true,
+  // secret 명시 — 일부 환경에서 자동 감지 실패 케이스 방지
   secret: process.env.NEXTAUTH_SECRET,
-  // TODO: adapter 활성화 — DB 마이그레이션 0001 적용 후
-  // adapter: SupabaseAdapter({
-  //   url: process.env.SUPABASE_URL!,
-  //   secret: process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  // }),
+  debug: true, // 진단용 — 안정화 후 false
   providers: [
     Discord({
       clientId: process.env.DISCORD_CLIENT_ID,
       clientSecret: process.env.DISCORD_CLIENT_SECRET,
-      // MVP: identify+email 만 사용. guilds.join 은 봇 연결 후 추가 예정.
-      authorization: { params: { scope: 'identify email' } },
     }),
   ],
   session: {
     strategy: 'jwt',
-    maxAge: 60 * 60 * 24 * 30, // 30일
-  },
-  pages: {
-    signIn: '/login',
-  },
-  callbacks: {
-    async jwt({ token, account, profile }) {
-      // TODO: 구현 — 최초 로그인 시 users upsert (discord_id unique)
-      //           handle 미존재 → 발급 · can_post 체크
-      if (account && profile) {
-        token.discordId = (profile as { id?: string }).id;
-      }
-      return token;
-    },
-    async session({ session, token }) {
-      // TODO: 구현 — session.user.id = users.id 매핑
-      //           Supabase RLS용 JWT 서명 (session.supabaseAccessToken)
-      if (token.sub) {
-        (session.user as { id?: string }).id = token.sub;
-      }
-      return session;
-    },
-    authorized({ auth, request }) {
-      // middleware에서 보호 라우트 게이트로 활용
-      const isLoggedIn = !!auth?.user;
-      const protectedPaths = ['/me', '/harnesses/new'];
-      const pathname = request.nextUrl.pathname;
-      if (protectedPaths.some((p) => pathname.startsWith(p))) {
-        return isLoggedIn;
-      }
-      return true;
-    },
+    maxAge: 60 * 60 * 24 * 30,
   },
 };
 
-// 모노레포 환경에서 destructure 시 signIn 타입 추론이 @auth/core 내부 경로를 참조하는 문제를
-// 회피하기 위해 중간 상수에 NextAuthResult 어노테이션 후 개별 export 로 재발행.
 const nextAuth: NextAuthResult = NextAuth(authConfig);
 export const handlers: NextAuthResult['handlers'] = nextAuth.handlers;
 export const signIn: NextAuthResult['signIn'] = nextAuth.signIn;
