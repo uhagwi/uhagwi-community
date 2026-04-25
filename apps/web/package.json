@@ -12,6 +12,9 @@
     "test": "echo \"(TODO) vitest 도입 — W3 QA 단계\" && exit 0",
     "clean": "rm -rf .next .turbo node_modules"
   },
+  "engines": {
+    "node": "20.x"
+  },
   "dependencies": {
     "@auth/core": "^0.40.0",
     "@auth/supabase-adapter": "^1.4.0",

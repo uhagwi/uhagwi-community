@@ -24,6 +24,7 @@ import {
   type Visibility,
 } from './harness-form-fields';
 import { TextInputs, BodyInputs } from './harness-form-inputs';
+import { HarnessFolderUpload, type ParsedHarness } from './harness-folder-upload';
 
 const FormSchema = z.object({
   title: z.string().min(2, '제목은 2자 이상이어야 해요.').max(120),
@@ -55,6 +56,17 @@ export function HarnessForm() {
   const [tagsRaw, setTagsRaw] = useState('');
   const [category, setCategory] = useState<Category>('other');
   const [visibility, setVisibility] = useState<Visibility>('public');
+
+  function applyParsed(p: ParsedHarness) {
+    if (p.title) setTitle(p.title);
+    if (p.one_liner) setOneLiner(p.one_liner);
+    if (p.persona_name) setPersonaName(p.persona_name);
+    if (p.purpose) setPurpose(p.purpose);
+    if (p.body_md) setBodyMd(p.body_md);
+    if (p.components?.length) setComponentsRaw(p.components.join(', '));
+    if (p.tags?.length) setTagsRaw(p.tags.join(', '));
+    if (p.category) setCategory(p.category);
+  }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -136,6 +148,13 @@ export function HarnessForm() {
       aria-label="하네스 작성 폼"
       noValidate
     >
+      <section aria-label="폴더 자동 분석" className="space-y-2">
+        <h2 className="text-sm font-semibold text-brand-800">
+          ✨ 하네스 폴더 자동 채움 <span className="text-xs font-normal text-[color:var(--color-ink-600)]">(선택)</span>
+        </h2>
+        <HarnessFolderUpload onParsed={applyParsed} />
+      </section>
+      <hr className="border-[color:var(--color-ink-300)]/40" />
       <TextInputs
         title={title}
         setTitle={setTitle}
