@@ -2,16 +2,17 @@
  * HarnessCard — 갤러리·프로필 공용 카드
  * 근거: docs/service-dev/02_design/ui.md §3-5, §2-2
  *
- * MVP Phase 1: 이모지 썸네일 + 의인화 + 제목 + tagline + 리액션 요약 + 주접지수.
- * Phase 2: next/image 썸네일 + 상대 시간 포매터 교체.
+ * Phase 2: Supabase fetch 결과(`HarnessFeedRow`) 직접 수신.
+ * - tagline 필드 부재 → `one_liner`를 카드 보조 카피로 사용 (line-clamp-2)
+ * - comments 미동봉 → 댓글 평균은 `avg_juzzep`(서버 집계) 사용
+ * - 작성자 핸들은 `author?.handle` (없으면 익명)
  */
 import Link from 'next/link';
 import { CharacterThumbnail } from '@/components/character-thumbnail';
-import type { SampleHarness } from '@/data/sample-harnesses';
-import { averageJuzzep, totalReactions } from '@/data/sample-harnesses';
+import type { HarnessFeedRow } from '@/lib/db/harnesses';
 
 export type HarnessCardProps = {
-  harness: SampleHarness;
+  harness: HarnessFeedRow;
 };
 
 const dateFormatter = new Intl.DateTimeFormat('ko-KR', {
@@ -20,25 +21,38 @@ const dateFormatter = new Intl.DateTimeFormat('ko-KR', {
   day: 'numeric',
 });
 
+const FALLBACK_EMOJI = '🌊';
+
+function totalReactions(counts: HarnessFeedRow['reaction_counts']): number {
+  return counts.heart + counts.fire + counts.bow + counts.pinch;
+}
+
 export function HarnessCard({ harness }: HarnessCardProps) {
   const {
     slug,
     title,
     persona_name,
-    tagline,
+    one_liner,
     published_at,
+    created_at,
     reaction_counts,
-    comments,
+    avg_juzzep,
     thumbnail_emoji,
     thumbnail_url,
     tags,
     view_count,
+    author,
   } = harness;
 
   const displayName = persona_name ? `🌊 ${persona_name}` : '🌊';
   const totalReact = totalReactions(reaction_counts);
-  const juzzep = averageJuzzep(comments);
-  const formattedDate = dateFormatter.format(new Date(published_at));
+  const juzzep = Math.round(avg_juzzep ?? 0);
+  const dateSource = published_at ?? created_at;
+  const formattedDate = dateSource
+    ? dateFormatter.format(new Date(dateSource))
+    : '';
+  const handleLabel = author?.handle ?? '익명';
+  const fallbackEmoji = thumbnail_emoji ?? FALLBACK_EMOJI;
 
   return (
     <article
@@ -55,7 +69,7 @@ export function HarnessCard({ harness }: HarnessCardProps) {
         <div className="relative flex aspect-video w-full items-center justify-center overflow-hidden rounded-[10px] bg-gradient-to-br from-brand-100 via-cream-100 to-mint-400/30 transition group-hover:scale-[1.02]">
           <CharacterThumbnail
             src={thumbnail_url}
-            fallbackEmoji={thumbnail_emoji}
+            fallbackEmoji={fallbackEmoji}
             alt={`${title} 캐릭터`}
           />
         </div>
@@ -66,7 +80,7 @@ export function HarnessCard({ harness }: HarnessCardProps) {
             {title}
           </h3>
           <p className="mt-1 text-sm text-[color:var(--color-ink-600)] line-clamp-2">
-            {tagline}
+            {one_liner}
           </p>
 
           {/* 태그 */}
@@ -87,7 +101,7 @@ export function HarnessCard({ harness }: HarnessCardProps) {
         {/* Footer */}
         <footer className="mt-auto flex flex-col gap-2 border-t border-[color:var(--color-ink-300)]/40 pt-3 text-xs text-[color:var(--color-ink-600)]">
           <div className="flex items-center justify-between">
-            <span>@{SAMPLE_AUTHOR_HANDLE}</span>
+            <span>@{handleLabel}</span>
             <span aria-label={`조회수 ${view_count}회`}>👁 {view_count.toLocaleString('ko-KR')}</span>
           </div>
           <div className="flex items-center justify-between">
@@ -104,14 +118,13 @@ export function HarnessCard({ harness }: HarnessCardProps) {
               <span>🤌 {reaction_counts.pinch}</span>
             </span>
           </div>
-          <div className="text-[10px] text-[color:var(--color-ink-600)]/80">
-            {formattedDate} 발행
-          </div>
+          {formattedDate ? (
+            <div className="text-[10px] text-[color:var(--color-ink-600)]/80">
+              {formattedDate} 발행
+            </div>
+          ) : null}
         </footer>
       </Link>
     </article>
   );
 }
-
-// MVP: 단일 작성자. Phase 2에서 harness.author 연결.
-const SAMPLE_AUTHOR_HANDLE = 'jinmyeung';

@@ -2,21 +2,20 @@
  * 하네스 갤러리 `/harnesses`
  * 근거: docs/service-dev/02_design/ui.md §2-2 갤러리 와이어프레임
  *
- * MVP Phase 1: 하드코딩 샘플 4종 + "곧 공개" placeholder 2종.
- * - 필터 바는 시각적 목업 (실동작은 Phase 2 QS 파라미터로 교체)
- * - 카드 그리드: 1col / 2col / 3col (md / lg)
- * - 서버 컴포넌트 기본, 인터랙션 없음
- *
- * 설계 문서 스펙 경로는 `/gallery`이지만 요청서 준수 차원에서 `/harnesses`로 유지.
+ * Phase 2: Supabase 실 DB fetch (force-dynamic).
+ * - 발행된(public·published) 하네스 최신순
+ * - 환경변수 미설정·DB 오류 시 빈 배열로 fallback (서비스 무중단)
+ * - 0건일 때: 안내 카드 1장 + "곧 공개" 플레이스홀더 유지
  */
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { HarnessCard } from '@/components/harness-card';
 import {
-  SAMPLE_HARNESSES,
-  CATEGORY_LABELS,
-  type SampleHarness,
-} from '@/data/sample-harnesses';
+  listPublishedHarnesses,
+  type HarnessFeedRow,
+} from '@/lib/db/harnesses';
+
+export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
   title: '하네스 갤러리',
@@ -24,16 +23,29 @@ export const metadata: Metadata = {
     '우하귀에서 운영 중인 AI 하네스들을 둘러보세요. 검증·개선·제안서·서비스 개발까지 전부.',
 };
 
-const CATEGORIES: Array<SampleHarness['category'] | 'all'> = [
-  'all',
-  'verify',
-  'improve',
-  'proposal',
-  'develop',
-];
+type CategoryKey = 'all' | 'verify' | 'improve' | 'proposal' | 'develop';
 
-export default function HarnessGalleryPage() {
-  const harnesses = SAMPLE_HARNESSES;
+const CATEGORY_LABELS: Record<CategoryKey, string> = {
+  all: '전체',
+  verify: '검증',
+  improve: '개선',
+  proposal: '기획',
+  develop: '개발',
+};
+
+const CATEGORIES: CategoryKey[] = ['all', 'verify', 'improve', 'proposal', 'develop'];
+
+async function safeListHarnesses(): Promise<HarnessFeedRow[]> {
+  try {
+    return await listPublishedHarnesses();
+  } catch (err) {
+    console.error('[gallery] listPublishedHarnesses failed:', err);
+    return [];
+  }
+}
+
+export default async function HarnessGalleryPage() {
+  const harnesses = await safeListHarnesses();
 
   return (
     <div className="space-y-8">
@@ -45,8 +57,8 @@ export default function HarnessGalleryPage() {
         <p className="mx-auto max-w-[640px] text-sm text-[color:var(--color-ink-600)] md:mx-0 md:text-base">
           꽃집·교사·개발자·기획자 — 누구든 자기만의 AI 하네스를 자랑하는 곳.
           {' '}
-          <strong className="text-brand-700">이번 주는 운영자 이진명</strong>
-          의 범용 하네스 4종을 맛보기로 공개합니다.
+          <strong className="text-brand-700">발행된 하네스</strong>를 최신순으로
+          소개합니다.
         </p>
       </header>
 
@@ -81,6 +93,8 @@ export default function HarnessGalleryPage() {
         aria-label="하네스 목록"
         className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-5 lg:grid-cols-3 lg:gap-6"
       >
+        {harnesses.length === 0 ? <EmptyStateCard /> : null}
+
         {harnesses.map((harness) => (
           <HarnessCard key={harness.id} harness={harness} />
         ))}
@@ -117,6 +131,33 @@ export default function HarnessGalleryPage() {
         </Link>
       </section>
     </div>
+  );
+}
+
+function EmptyStateCard() {
+  return (
+    <article
+      role="article"
+      aria-label="첫 하네스를 기다리는 중"
+      className="card col-span-full flex flex-col items-center justify-center gap-3 border-2 border-dashed border-brand-200 bg-cream-50 py-12 text-center"
+    >
+      <span className="text-6xl" aria-hidden="true">
+        🌊
+      </span>
+      <h2 className="text-lg font-semibold text-brand-900">
+        곧 첫 하네스가 등록됩니다
+      </h2>
+      <p className="max-w-[420px] text-sm text-[color:var(--color-ink-600)]">
+        지금은 뼈대만 깔린 상태예요. 첫 발행자가 되어 자랑하러 오세요 🤌
+      </p>
+      <Link
+        href="/harnesses/new"
+        className="btn-primary mt-2"
+        aria-label="첫 하네스 작성하기"
+      >
+        첫 하네스 자랑하기 🚀
+      </Link>
+    </article>
   );
 }
 

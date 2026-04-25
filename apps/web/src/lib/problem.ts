@@ -74,6 +74,24 @@ export function problem(
   });
 }
 
-/** 간편 헬퍼 */
+/** 간편 헬퍼 묶음 */
 export const notImplemented = (detail = '이 엔드포인트는 MVP 후속 구현 대기 중입니다.') =>
   problem('not-implemented', { detail });
+
+export const unauthorized = (detail = '로그인이 필요해요.') =>
+  problem('unauthorized', { detail });
+
+export const forbidden = (detail = '이 작업에 대한 권한이 없어요.') =>
+  problem('forbidden', { detail });
+
+export const notFound = (detail = '리소스를 찾을 수 없어요.') =>
+  problem('not-found', { detail });
+
+export const badRequest = (detail = '요청이 올바르지 않아요.', errors?: ProblemFieldError[]) =>
+  problem('validation', { detail, errors });
+
+export const conflict = (detail = '충돌이 발생했어요.') =>
+  problem('conflict', { detail });
+
+export const internal = (detail = '서버에서 문제가 생겼어요. 잠시 후 다시 시도해 주세요.') =>
+  problem('internal', { detail });

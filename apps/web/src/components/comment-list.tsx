@@ -3,15 +3,21 @@
  * 근거: docs/service-dev/02_design/ui.md §2-3, §3-5 JuzzepComment
  *
  * 각 댓글: 아바타 + handle + 본문 + 주접지수 게이지(0~100, 핫핑크) + 작성 시각.
+ * Phase 2: DbComment(Supabase) 직접 수신 — avatar_url 우선, 없으면 이모지 fallback.
  */
-import type { SampleComment } from '@/data/sample-harnesses';
+import Image from 'next/image';
+import type { DbComment } from '@/lib/db/comments';
 import { JuzzepBadge } from '@uhagwi/ui';
+import { CommentDeleteButton } from '@/components/comment-delete-button';
 
 export type CommentListProps = {
-  comments: SampleComment[];
+  comments: DbComment[];
+  /** 현재 로그인 사용자 ID — 본인 댓글에만 삭제 버튼 표시. 미로그인이면 undefined. */
+  currentUserId?: string;
 };
 
 const relativeFormatter = new Intl.RelativeTimeFormat('ko-KR', { numeric: 'auto' });
+const FALLBACK_AVATAR_EMOJI = '🌊';
 
 function formatRelative(iso: string): string {
   const diffMs = new Date(iso).getTime() - Date.now();
@@ -24,7 +30,7 @@ function formatRelative(iso: string): string {
   return relativeFormatter.format(diffDay, 'day');
 }
 
-export function CommentList({ comments }: CommentListProps) {
+export function CommentList({ comments, currentUserId }: CommentListProps) {
   if (comments.length === 0) {
     return (
       <p className="text-sm text-[color:var(--color-ink-600)]">
@@ -35,45 +41,65 @@ export function CommentList({ comments }: CommentListProps) {
 
   return (
     <ul className="space-y-4" aria-label={`주접 댓글 ${comments.length}개`}>
-      {comments.map((comment) => (
-        <li
-          key={comment.id}
-          className="card flex gap-3 border border-transparent transition hover:border-brand-100"
-        >
-          {/* 아바타 */}
-          <div
-            aria-hidden="true"
-            className="flex h-10 w-10 flex-none items-center justify-center rounded-full bg-cream-100 text-xl"
-          >
-            {comment.author.avatar_emoji}
-          </div>
+      {comments.map((comment) => {
+        const handle = comment.author?.handle ?? '익명';
+        const displayName = comment.author?.display_name ?? '익명의 누군가';
+        const avatarUrl = comment.author?.avatar_url ?? null;
+        const isMine = !!currentUserId && comment.author?.id === currentUserId;
 
-          {/* 본문 */}
-          <div className="flex min-w-0 flex-1 flex-col gap-1">
-            <header className="flex flex-wrap items-center gap-2 text-sm">
-              <span className="font-semibold text-brand-900">
-                {comment.author.display_name}
-              </span>
-              <span className="text-xs text-[color:var(--color-ink-600)]">
-                @{comment.author.handle}
-              </span>
-              <span
-                className="text-xs text-[color:var(--color-ink-600)]/80"
-                aria-label={`작성 시각 ${comment.created_at}`}
-              >
-                · {formatRelative(comment.created_at)}
-              </span>
-            </header>
-            <p className="text-sm leading-relaxed text-[color:var(--color-ink-900)]">
-              {comment.body}
-            </p>
-            <div className="mt-1 flex items-center gap-2">
-              <JuzzepBadge score={comment.juzzep_score} />
-              <JuzzepGauge score={comment.juzzep_score} />
+        return (
+          <li
+            key={comment.id}
+            className="card flex gap-3 border border-transparent transition hover:border-brand-100"
+          >
+            {/* 아바타 — avatar_url 우선, 없으면 이모지 */}
+            <div
+              aria-hidden="true"
+              className="relative flex h-10 w-10 flex-none items-center justify-center overflow-hidden rounded-full bg-cream-100 text-xl"
+            >
+              {avatarUrl ? (
+                <Image
+                  src={avatarUrl}
+                  alt=""
+                  fill
+                  sizes="40px"
+                  className="object-cover"
+                />
+              ) : (
+                <span>{FALLBACK_AVATAR_EMOJI}</span>
+              )}
             </div>
-          </div>
-        </li>
-      ))}
+
+            {/* 본문 */}
+            <div className="flex min-w-0 flex-1 flex-col gap-1">
+              <header className="flex flex-wrap items-center gap-2 text-sm">
+                <span className="font-semibold text-brand-900">
+                  {displayName}
+                </span>
+                <span className="text-xs text-[color:var(--color-ink-600)]">
+                  @{handle}
+                </span>
+                <span
+                  className="text-xs text-[color:var(--color-ink-600)]/80"
+                  aria-label={`작성 시각 ${comment.created_at}`}
+                >
+                  · {formatRelative(comment.created_at)}
+                </span>
+              </header>
+              <p className="text-sm leading-relaxed text-[color:var(--color-ink-900)]">
+                {comment.body}
+              </p>
+              <div className="mt-1 flex items-center gap-2">
+                <JuzzepBadge score={comment.juzzep_score} />
+                <JuzzepGauge score={comment.juzzep_score} />
+                {isMine ? (
+                  <CommentDeleteButton commentId={comment.id} className="ml-auto" />
+                ) : null}
+              </div>
+            </div>
+          </li>
+        );
+      })}
     </ul>
   );
 }

@@ -2,36 +2,67 @@
  * 하네스 상세 `/harnesses/[slug]`
  * 근거: docs/service-dev/02_design/ui.md §2-3 하네스 상세 와이어프레임
  *
- * MVP Phase 1: 하드코딩 샘플 4종 대상. 2-column 레이아웃 (desktop) / stacked (mobile).
- * - 좌측 메인: 제목 · tagline · body_md(Markdown) · 구성요소 · 태그
- * - 우측 사이드: 작성자 카드 · 주접지수 뱃지 · 리액션 바 · 이식 beta 버튼
- * - 하단: 댓글 리스트
- * Phase 2: Supabase fetch · 구조도 Mermaid SSR · 실제 이식 동작.
+ * Phase 2: Supabase 실 DB fetch (force-dynamic).
+ * - 좌측 메인: 제목 · 한줄요약 · 본문(Markdown) · 구성요소 · 댓글
+ * - 우측 사이드: 작성자 카드 · 주접지수 · 리액션 · 이식 CTA
+ * - 환경변수 미설정·DB 오류 시 notFound() (안전한 404)
+ * - generateStaticParams 제거 — 갤러리·상세 모두 동적 렌더
  */
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import Image from 'next/image';
 import { notFound } from 'next/navigation';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { CharacterThumbnail } from '@/components/character-thumbnail';
 import { JuzzepReactions } from '@/components/juzzep-reactions';
 import { CommentList } from '@/components/comment-list';
+import { CommentForm } from '@/components/comment-form';
+import { auth } from '@/lib/auth';
 import {
-  SAMPLE_HARNESSES,
-  SAMPLE_AUTHOR,
-  averageJuzzep,
   getHarnessBySlug,
-} from '@/data/sample-harnesses';
+  type HarnessDetailRow,
+} from '@/lib/db/harnesses';
+import { listCommentsByHarness, type DbComment } from '@/lib/db/comments';
+import { getActiveReactions, type ReactionType } from '@/lib/db/reactions';
 import { JuzzepBadge } from '@uhagwi/ui';
+
+export const dynamic = 'force-dynamic';
 
 type Params = { slug: string };
 
-export function generateStaticParams(): Params[] {
-  return SAMPLE_HARNESSES.map((h) => ({ slug: h.slug }));
+const FALLBACK_EMOJI = '🌊';
+
+const dateFormatter = new Intl.DateTimeFormat('ko-KR', {
+  year: 'numeric',
+  month: 'long',
+  day: 'numeric',
+});
+
+async function safeGetHarness(slug: string): Promise<HarnessDetailRow | null> {
+  try {
+    return await getHarnessBySlug(slug);
+  } catch (err) {
+    console.error('[detail] getHarnessBySlug failed:', err);
+    return null;
+  }
 }
 
-export function generateMetadata({ params }: { params: Params }): Metadata {
-  const harness = getHarnessBySlug(params.slug);
+async function safeListComments(harnessId: string): Promise<DbComment[]> {
+  try {
+    return await listCommentsByHarness(harnessId);
+  } catch (err) {
+    console.error('[detail] listCommentsByHarness failed:', err);
+    return [];
+  }
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Params;
+}): Promise<Metadata> {
+  const harness = await safeGetHarness(params.slug);
   if (!harness) {
     return { title: '하네스를 찾을 수 없습니다' };
   }
@@ -40,46 +71,49 @@ export function generateMetadata({ params }: { params: Params }): Metadata {
     description: harness.one_liner,
     openGraph: {
       title: `${harness.persona_name ?? ''} — ${harness.title}`.trim(),
-      description: harness.tagline,
+      description: harness.one_liner,
       type: 'article',
-      publishedTime: harness.published_at,
+      publishedTime: harness.published_at ?? undefined,
     },
   };
 }
 
-const dateFormatter = new Intl.DateTimeFormat('ko-KR', {
-  year: 'numeric',
-  month: 'long',
-  day: 'numeric',
-});
-
-export default function HarnessDetailPage({ params }: { params: Params }) {
-  const harness = getHarnessBySlug(params.slug);
+export default async function HarnessDetailPage({
+  params,
+}: {
+  params: Params;
+}) {
+  const harness = await safeGetHarness(params.slug);
   if (!harness) {
     notFound();
   }
 
-  const {
-    title,
-    tagline,
-    persona_name,
-    persona_job,
-    one_liner,
-    purpose,
-    body_md,
-    components,
-    tags,
-    reaction_counts,
-    comments,
-    view_count,
-    published_at,
-    thumbnail_emoji,
-    thumbnail_url,
-    id,
-  } = harness;
+  const session = await auth();
+  const currentUserId = session?.user?.id;
+  const isAuthenticated = !!currentUserId;
+  let initialActive: ReactionType[] = [];
+  if (currentUserId) {
+    try {
+      initialActive = Array.from(
+        await getActiveReactions({ harnessId: harness.id, userId: currentUserId }),
+      );
+    } catch (err) {
+      console.error('[detail] getActiveReactions failed:', err);
+    }
+  }
 
-  const juzzepAvg = averageJuzzep(comments);
-  const formattedDate = dateFormatter.format(new Date(published_at));
+  const comments = await safeListComments(harness.id);
+  const juzzepAvg = Math.round(harness.avg_juzzep ?? 0);
+  const dateSource = harness.published_at ?? harness.created_at;
+  const formattedDate = dateSource
+    ? dateFormatter.format(new Date(dateSource))
+    : '';
+
+  const author = harness.author;
+  const authorHandle = author?.handle ?? 'anonymous';
+  const authorDisplay = author?.display_name ?? '익명의 빌더';
+  const authorAvatar = author?.avatar_url ?? null;
+  const fallbackEmoji = harness.thumbnail_emoji ?? FALLBACK_EMOJI;
 
   return (
     <article className="mx-auto max-w-[1100px]">
@@ -107,30 +141,29 @@ export default function HarnessDetailPage({ params }: { params: Params }) {
         <div className="space-y-6">
           <header className="space-y-3">
             <p className="font-display text-base text-brand-700">
-              {persona_name ? `🌊 ${persona_name}` : '🌊'}
+              {harness.persona_name ? `🌊 ${harness.persona_name}` : '🌊'}
             </p>
             <h1 className="font-display text-[28px] font-bold leading-tight text-brand-900 md:text-[36px]">
-              {title}
+              {harness.title}
             </h1>
             <p className="text-base text-[color:var(--color-ink-600)] md:text-lg">
-              {tagline}
+              {harness.one_liner}
             </p>
             <p className="text-sm text-[color:var(--color-ink-600)]">
               by{' '}
               <Link
-                href={`/u/${SAMPLE_AUTHOR.handle}`}
+                href={`/u/${authorHandle}`}
                 className="font-medium text-brand-700 hover:underline"
               >
-                @{SAMPLE_AUTHOR.handle}
+                @{authorHandle}
               </Link>
+              {formattedDate ? ` · ${formattedDate}` : ''}
               {' · '}
-              {formattedDate}
-              {' · '}
-              👁 {view_count.toLocaleString('ko-KR')}
+              👁 {harness.view_count.toLocaleString('ko-KR')}
             </p>
-            {tags.length > 0 ? (
+            {harness.tags.length > 0 ? (
               <ul className="flex flex-wrap gap-1.5" aria-label="태그 목록">
-                {tags.map((tag) => (
+                {harness.tags.map((tag) => (
                   <li key={tag} className="tag-chip">
                     #{tag}
                   </li>
@@ -141,13 +174,13 @@ export default function HarnessDetailPage({ params }: { params: Params }) {
 
           {/* 결과 섬네일 — 캐릭터 이미지 우선, 404·없으면 emoji fallback */}
           <figure
-            aria-label={`${title} 캐릭터 이미지`}
+            aria-label={`${harness.title} 캐릭터 이미지`}
             className="relative flex aspect-video w-full items-center justify-center overflow-hidden rounded-card bg-gradient-to-br from-brand-100 via-cream-100 to-mint-400/40"
           >
             <CharacterThumbnail
-              src={thumbnail_url}
-              fallbackEmoji={thumbnail_emoji}
-              alt={`${persona_name ?? title} 캐릭터`}
+              src={harness.thumbnail_url}
+              fallbackEmoji={fallbackEmoji}
+              alt={`${harness.persona_name ?? harness.title} 캐릭터`}
               sizes="(max-width: 1024px) 100vw, 720px"
               imageClassName="object-contain p-6"
               emojiClassName="text-[96px]"
@@ -159,106 +192,113 @@ export default function HarnessDetailPage({ params }: { params: Params }) {
             <h2 id="purpose" className="text-lg font-semibold text-brand-800">
               📝 한줄요약
             </h2>
-            <p className="text-base font-medium text-brand-900">{one_liner}</p>
-            <h3 className="pt-2 text-base font-semibold text-brand-800">
-              목적
-            </h3>
-            <p className="text-[color:var(--color-ink-900)]">{purpose}</p>
+            <p className="text-base font-medium text-brand-900">
+              {harness.one_liner}
+            </p>
+            <h3 className="pt-2 text-base font-semibold text-brand-800">목적</h3>
+            <p className="text-[color:var(--color-ink-900)]">{harness.purpose}</p>
           </section>
 
           {/* 본문 (Markdown) */}
-          <section aria-labelledby="body" className="space-y-3">
-            <h2 id="body" className="sr-only">
-              본문
-            </h2>
-            <div className="markdown-body space-y-4 text-[15px] leading-relaxed text-[color:var(--color-ink-900)]">
-              <ReactMarkdown
-                remarkPlugins={[remarkGfm]}
-                components={{
-                  h2: ({ children }) => (
-                    <h3 className="mt-6 font-display text-xl font-bold text-brand-900">
-                      {children}
-                    </h3>
-                  ),
-                  h3: ({ children }) => (
-                    <h4 className="mt-4 text-lg font-semibold text-brand-800">
-                      {children}
-                    </h4>
-                  ),
-                  p: ({ children }) => <p className="leading-7">{children}</p>,
-                  ul: ({ children }) => (
-                    <ul className="ml-5 list-disc space-y-1 marker:text-brand-500">
-                      {children}
-                    </ul>
-                  ),
-                  ol: ({ children }) => (
-                    <ol className="ml-5 list-decimal space-y-1 marker:text-brand-500">
-                      {children}
-                    </ol>
-                  ),
-                  strong: ({ children }) => (
-                    <strong className="font-semibold text-brand-800">
-                      {children}
-                    </strong>
-                  ),
-                  a: ({ children, href }) => (
-                    <a
-                      href={href}
-                      className="text-brand-700 underline underline-offset-2 hover:text-brand-900"
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      {children}
-                    </a>
-                  ),
-                  code: ({ children, className }) => {
-                    const isBlock = className?.startsWith('language-');
-                    if (isBlock) {
+          {harness.body_md ? (
+            <section aria-labelledby="body" className="space-y-3">
+              <h2 id="body" className="sr-only">
+                본문
+              </h2>
+              <div className="markdown-body space-y-4 text-[15px] leading-relaxed text-[color:var(--color-ink-900)]">
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
+                  components={{
+                    h2: ({ children }) => (
+                      <h3 className="mt-6 font-display text-xl font-bold text-brand-900">
+                        {children}
+                      </h3>
+                    ),
+                    h3: ({ children }) => (
+                      <h4 className="mt-4 text-lg font-semibold text-brand-800">
+                        {children}
+                      </h4>
+                    ),
+                    p: ({ children }) => <p className="leading-7">{children}</p>,
+                    ul: ({ children }) => (
+                      <ul className="ml-5 list-disc space-y-1 marker:text-brand-500">
+                        {children}
+                      </ul>
+                    ),
+                    ol: ({ children }) => (
+                      <ol className="ml-5 list-decimal space-y-1 marker:text-brand-500">
+                        {children}
+                      </ol>
+                    ),
+                    strong: ({ children }) => (
+                      <strong className="font-semibold text-brand-800">
+                        {children}
+                      </strong>
+                    ),
+                    a: ({ children, href }) => (
+                      <a
+                        href={href}
+                        className="text-brand-700 underline underline-offset-2 hover:text-brand-900"
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        {children}
+                      </a>
+                    ),
+                    code: ({ children, className }) => {
+                      const isBlock = className?.startsWith('language-');
+                      if (isBlock) {
+                        return (
+                          <code className={`${className} text-cream-50`}>
+                            {children}
+                          </code>
+                        );
+                      }
                       return (
-                        <code className={`${className} text-cream-50`}>
+                        <code className="rounded bg-cream-100 px-1 py-0.5 font-mono text-[13px] text-brand-800">
                           {children}
                         </code>
                       );
-                    }
-                    return (
-                      <code className="rounded bg-cream-100 px-1 py-0.5 font-mono text-[13px] text-brand-800">
+                    },
+                    pre: ({ children }) => (
+                      <pre className="overflow-x-auto rounded-card bg-brand-900 p-4 font-mono text-[13px] leading-6 text-cream-50">
                         {children}
-                      </code>
-                    );
-                  },
-                  pre: ({ children }) => (
-                    <pre className="overflow-x-auto rounded-card bg-brand-900 p-4 font-mono text-[13px] leading-6 text-cream-50">
-                      {children}
-                    </pre>
-                  ),
-                  blockquote: ({ children }) => (
-                    <blockquote className="border-l-4 border-brand-300 bg-cream-50 py-2 pl-4 italic text-[color:var(--color-ink-600)]">
-                      {children}
-                    </blockquote>
-                  ),
-                }}
-              >
-                {body_md}
-              </ReactMarkdown>
-            </div>
-          </section>
+                      </pre>
+                    ),
+                    blockquote: ({ children }) => (
+                      <blockquote className="border-l-4 border-brand-300 bg-cream-50 py-2 pl-4 italic text-[color:var(--color-ink-600)]">
+                        {children}
+                      </blockquote>
+                    ),
+                  }}
+                >
+                  {harness.body_md}
+                </ReactMarkdown>
+              </div>
+            </section>
+          ) : null}
 
           {/* 구성요소 */}
-          <section aria-labelledby="components" className="space-y-3">
-            <h2 id="components" className="text-lg font-semibold text-brand-800">
-              🧰 구성요소 ({components.length})
-            </h2>
-            <ul className="flex flex-wrap gap-2">
-              {components.map((c) => (
-                <li
-                  key={c}
-                  className="inline-flex items-center rounded-pill bg-brand-50 px-3 py-1 text-sm text-brand-800"
-                >
-                  <code className="font-mono text-xs">{c}</code>
-                </li>
-              ))}
-            </ul>
-          </section>
+          {harness.components.length > 0 ? (
+            <section aria-labelledby="components" className="space-y-3">
+              <h2
+                id="components"
+                className="text-lg font-semibold text-brand-800"
+              >
+                🧰 구성요소 ({harness.components.length})
+              </h2>
+              <ul className="flex flex-wrap gap-2">
+                {harness.components.map((c) => (
+                  <li
+                    key={c}
+                    className="inline-flex items-center rounded-pill bg-brand-50 px-3 py-1 text-sm text-brand-800"
+                  >
+                    <code className="font-mono text-xs">{c}</code>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
 
           {/* 댓글 */}
           <section aria-labelledby="comments" className="space-y-4">
@@ -270,12 +310,8 @@ export default function HarnessDetailPage({ params }: { params: Params }) {
                 평균 주접지수 {juzzepAvg}
               </span>
             </div>
-            <CommentList comments={comments} />
-            <div className="card border-2 border-dashed border-brand-200 bg-cream-50 text-center">
-              <p className="text-sm text-[color:var(--color-ink-600)]">
-                주접 쓰기는 Discord 로그인 후 가능합니다 🤌 (Phase 2 연동 예정)
-              </p>
-            </div>
+            <CommentForm harnessId={harness.id} isAuthenticated={isAuthenticated} />
+            <CommentList comments={comments} currentUserId={currentUserId} />
           </section>
         </div>
 
@@ -287,24 +323,29 @@ export default function HarnessDetailPage({ params }: { params: Params }) {
             <div className="flex items-center gap-3">
               <div
                 aria-hidden="true"
-                className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-brand-200 to-juzzep-400/40 text-2xl"
+                className="relative flex h-12 w-12 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-brand-200 to-juzzep-400/40 text-2xl"
               >
-                {SAMPLE_AUTHOR.avatar_emoji}
+                {authorAvatar ? (
+                  <Image
+                    src={authorAvatar}
+                    alt=""
+                    fill
+                    sizes="48px"
+                    className="object-cover"
+                  />
+                ) : (
+                  <span>{FALLBACK_EMOJI}</span>
+                )}
               </div>
               <div className="min-w-0">
-                <p className="font-semibold text-brand-900">
-                  {SAMPLE_AUTHOR.display_name}
-                </p>
+                <p className="font-semibold text-brand-900">{authorDisplay}</p>
                 <p className="text-xs text-[color:var(--color-ink-600)]">
-                  @{SAMPLE_AUTHOR.handle}
+                  @{authorHandle}
                 </p>
               </div>
             </div>
-            <p className="text-xs leading-relaxed text-[color:var(--color-ink-600)]">
-              {SAMPLE_AUTHOR.bio}
-            </p>
             <Link
-              href={`/u/${SAMPLE_AUTHOR.handle}`}
+              href={`/u/${authorHandle}`}
               className="block w-full rounded-[10px] border border-brand-200 bg-white px-3 py-2 text-center text-xs font-medium text-brand-700 transition hover:bg-brand-50"
             >
               프로필 보기 →
@@ -321,19 +362,19 @@ export default function HarnessDetailPage({ params }: { params: Params }) {
               <JuzzepBadge score={juzzepAvg} />
             </div>
             <div className="space-y-1 text-xs text-[color:var(--color-ink-600)]">
-              {persona_job ? (
+              {harness.persona_job ? (
                 <p>
                   <span className="font-medium text-brand-700">대상:</span>{' '}
-                  {persona_job}
+                  {harness.persona_job}
                 </p>
               ) : null}
               <p>
                 <span className="font-medium text-brand-700">구성요소:</span>{' '}
-                {components.length}개
+                {harness.components.length}개
               </p>
               <p>
                 <span className="font-medium text-brand-700">조회:</span>{' '}
-                {view_count.toLocaleString('ko-KR')}회
+                {harness.view_count.toLocaleString('ko-KR')}회
               </p>
             </div>
           </div>
@@ -343,10 +384,17 @@ export default function HarnessDetailPage({ params }: { params: Params }) {
             <h2 className="text-sm font-semibold text-brand-800">
               이 하네스 주접 놓기
             </h2>
-            <JuzzepReactions harnessId={id} initial={reaction_counts} />
-            <p className="text-[11px] text-[color:var(--color-ink-600)]">
-              * MVP: 로그인 전에는 로컬 상태만 변경됩니다.
-            </p>
+            <JuzzepReactions
+              harnessId={harness.id}
+              initial={harness.reaction_counts}
+              mine={initialActive}
+              isAuthenticated={isAuthenticated}
+            />
+            {!isAuthenticated ? (
+              <p className="text-[11px] text-[color:var(--color-ink-600)]">
+                * 로그인 후 진짜로 카운트됩니다.
+              </p>
+            ) : null}
           </div>
 
           {/* 이식 CTA */}
@@ -355,7 +403,8 @@ export default function HarnessDetailPage({ params }: { params: Params }) {
               내 업무에 이식하기
             </h2>
             <p className="text-xs text-[color:var(--color-ink-600)]">
-              Claude / ChatGPT / n8n / Zapier 등에 이 하네스를 복사할 수 있습니다.
+              Claude / ChatGPT / n8n / Zapier 등에 이 하네스를 복사할 수
+              있습니다.
             </p>
             <button
               type="button"
