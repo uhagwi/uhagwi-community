@@ -14,6 +14,8 @@
     "db:lint": "supabase db lint"
   },
   "devDependencies": {
+    "@types/pg": "^8.20.0",
+    "pg": "^8.20.0",
     "supabase": "^1.200.0"
   }
 }
