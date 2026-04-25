@@ -6,7 +6,7 @@
  */
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
-import { auth } from '@/lib/auth';
+import { getCurrentUserId } from '@/lib/auth-user';
 import { problem } from '@/lib/problem';
 import { softDeleteComment } from '@/lib/db/comments';
 
@@ -17,14 +17,9 @@ type RouteContext = { params: { id: string } };
 const CommentIdSchema = z.string().uuid();
 
 export async function DELETE(_req: NextRequest, { params }: RouteContext) {
-  const session = await auth();
-  if (!session) {
-    return problem('unauthorized', { detail: '로그인이 필요해요.' });
-  }
-
-  const userId = session.user?.id;
+  const userId = await getCurrentUserId();
   if (!userId) {
-    return problem('unauthorized', { detail: '사용자 식별 실패 — 다시 로그인해주세요.' });
+    return problem('unauthorized', { detail: '로그인이 필요해요.' });
   }
 
   const idParse = CommentIdSchema.safeParse(params.id);

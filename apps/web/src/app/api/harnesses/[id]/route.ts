@@ -7,7 +7,7 @@
  */
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
-import { auth } from '@/lib/auth';
+import { getCurrentUserId } from '@/lib/auth-user';
 import {
   problem,
   notImplemented,
@@ -73,9 +73,8 @@ async function ensureOwner(harnessId: string, userId: string) {
 }
 
 export async function PATCH(req: NextRequest, { params }: RouteContext) {
-  const session = await auth();
-  const userId = (session?.user as { id?: string } | undefined)?.id;
-  if (!session || !userId) return unauthorized();
+  const userId = await getCurrentUserId();
+  if (!userId) return unauthorized();
 
   const { id } = params;
   if (!id) return badRequest('id 필수');
@@ -145,9 +144,8 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
 }
 
 export async function DELETE(_req: NextRequest, { params }: RouteContext) {
-  const session = await auth();
-  const userId = (session?.user as { id?: string } | undefined)?.id;
-  if (!session || !userId) return unauthorized();
+  const userId = await getCurrentUserId();
+  if (!userId) return unauthorized();
 
   const { id } = params;
   if (!id) return badRequest('id 필수');

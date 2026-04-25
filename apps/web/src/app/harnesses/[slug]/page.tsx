@@ -18,7 +18,7 @@ import { CharacterThumbnail } from '@/components/character-thumbnail';
 import { JuzzepReactions } from '@/components/juzzep-reactions';
 import { CommentList } from '@/components/comment-list';
 import { CommentForm } from '@/components/comment-form';
-import { auth } from '@/lib/auth';
+import { getCurrentUserId } from '@/lib/auth-user';
 import {
   getHarnessBySlug,
   type HarnessDetailRow,
@@ -88,8 +88,7 @@ export default async function HarnessDetailPage({
     notFound();
   }
 
-  const session = await auth();
-  const currentUserId = session?.user?.id;
+  const currentUserId = await getCurrentUserId();
   const isAuthenticated = !!currentUserId;
   let initialActive: ReactionType[] = [];
   if (currentUserId) {
@@ -311,7 +310,7 @@ export default async function HarnessDetailPage({
               </span>
             </div>
             <CommentForm harnessId={harness.id} isAuthenticated={isAuthenticated} />
-            <CommentList comments={comments} currentUserId={currentUserId} />
+            <CommentList comments={comments} currentUserId={currentUserId ?? undefined} />
           </section>
         </div>
 

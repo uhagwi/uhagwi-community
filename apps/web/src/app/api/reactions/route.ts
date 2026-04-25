@@ -9,7 +9,7 @@
  */
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
-import { auth } from '@/lib/auth';
+import { getCurrentUserId } from '@/lib/auth-user';
 import { problem } from '@/lib/problem';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { toggleReaction, type ReactionCounts } from '@/lib/db/reactions';
@@ -58,13 +58,8 @@ function cacheSet(key: string, result: ReactionToggleResult): void {
 }
 
 export async function POST(req: NextRequest) {
-  const session = await auth();
-  if (!session) return problem('unauthorized', { detail: '로그인이 필요해요.' });
-
-  const userId = session.user?.id;
-  if (!userId) {
-    return problem('unauthorized', { detail: '사용자 식별 실패 — 다시 로그인해주세요.' });
-  }
+  const userId = await getCurrentUserId();
+  if (!userId) return problem('unauthorized', { detail: '로그인이 필요해요.' });
 
   const rl = await checkRateLimit('reaction', userId);
   if (!rl.ok) return problem('rate-limit');

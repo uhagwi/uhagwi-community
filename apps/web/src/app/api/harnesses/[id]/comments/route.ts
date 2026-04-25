@@ -7,7 +7,7 @@
  */
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
-import { auth } from '@/lib/auth';
+import { getCurrentUserId } from '@/lib/auth-user';
 import { problem } from '@/lib/problem';
 import { checkRateLimit } from '@/lib/rate-limit';
 import {
@@ -41,14 +41,9 @@ export async function GET(_req: NextRequest, { params }: RouteContext) {
 }
 
 export async function POST(req: NextRequest, { params }: RouteContext) {
-  const session = await auth();
-  if (!session) {
-    return problem('unauthorized', { detail: '로그인 후 댓글 작성이 가능해요.' });
-  }
-
-  const userId = session.user?.id;
+  const userId = await getCurrentUserId();
   if (!userId) {
-    return problem('unauthorized', { detail: '사용자 식별 실패 — 다시 로그인해주세요.' });
+    return problem('unauthorized', { detail: '로그인 후 댓글 작성이 가능해요.' });
   }
 
   const rl = await checkRateLimit('write', userId);

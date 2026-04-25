@@ -12,7 +12,7 @@
  */
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
-import { auth } from '@/lib/auth';
+import { getCurrentUserId } from '@/lib/auth-user';
 import {
   problem,
   notImplemented,
@@ -121,9 +121,8 @@ async function attachTags(harnessId: string, labels: string[]): Promise<{ ok: nu
 }
 
 export async function POST(req: NextRequest) {
-  const session = await auth();
-  const userId = (session?.user as { id?: string } | undefined)?.id;
-  if (!session || !userId) {
+  const userId = await getCurrentUserId();
+  if (!userId) {
     return unauthorized();
   }
 
