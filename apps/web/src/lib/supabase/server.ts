@@ -15,9 +15,16 @@ import { cookies } from 'next/headers';
 /** 일반 요청용 (anon 키 + 쿠키 기반 세션). RLS 적용. */
 export function getSupabaseServerClient() {
   const cookieStore = cookies();
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_ANON_KEY;
+  if (!url || !key) {
+    throw new Error(
+      'Supabase 미설정 — .env.local 에 SUPABASE_URL/SUPABASE_ANON_KEY 추가 필요. CONNECT.md §2 참조.',
+    );
+  }
   return createServerClient(
-    process.env.SUPABASE_URL!,
-    process.env.SUPABASE_ANON_KEY!,
+    url,
+    key,
     {
       cookies: {
         get(name: string) {

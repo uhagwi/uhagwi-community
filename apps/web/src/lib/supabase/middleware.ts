@@ -10,9 +10,14 @@ import { NextResponse, type NextRequest } from 'next/server';
 export async function updateSupabaseSession(request: NextRequest) {
   let response = NextResponse.next({ request });
 
+  // Supabase 미설정 시 그대로 통과 — 비주얼 미리보기 단계에서 인증 없이도 동작
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_ANON_KEY;
+  if (!url || !key) return response;
+
   const supabase = createServerClient(
-    process.env.SUPABASE_URL!,
-    process.env.SUPABASE_ANON_KEY!,
+    url,
+    key,
     {
       cookies: {
         get(name: string) {
