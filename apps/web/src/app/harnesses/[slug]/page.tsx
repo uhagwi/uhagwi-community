@@ -13,6 +13,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { CharacterThumbnail } from '@/components/character-thumbnail';
 import { JuzzepReactions } from '@/components/juzzep-reactions';
 import { CommentList } from '@/components/comment-list';
 import {
@@ -73,6 +74,7 @@ export default function HarnessDetailPage({ params }: { params: Params }) {
     view_count,
     published_at,
     thumbnail_emoji,
+    thumbnail_url,
     id,
   } = harness;
 
@@ -137,14 +139,19 @@ export default function HarnessDetailPage({ params }: { params: Params }) {
             ) : null}
           </header>
 
-          {/* 결과 섬네일 */}
+          {/* 결과 섬네일 — 캐릭터 이미지 우선, 404·없으면 emoji fallback */}
           <figure
-            aria-label={`${title} 결과 이미지`}
-            className="flex aspect-video w-full items-center justify-center overflow-hidden rounded-card bg-gradient-to-br from-brand-100 via-cream-100 to-mint-400/40"
+            aria-label={`${title} 캐릭터 이미지`}
+            className="relative flex aspect-video w-full items-center justify-center overflow-hidden rounded-card bg-gradient-to-br from-brand-100 via-cream-100 to-mint-400/40"
           >
-            <span className="text-[96px]" aria-hidden="true">
-              {thumbnail_emoji}
-            </span>
+            <CharacterThumbnail
+              src={thumbnail_url}
+              fallbackEmoji={thumbnail_emoji}
+              alt={`${persona_name ?? title} 캐릭터`}
+              sizes="(max-width: 1024px) 100vw, 720px"
+              imageClassName="object-contain p-6"
+              emojiClassName="text-[96px]"
+            />
           </figure>
 
           {/* 한줄요약 + 목적 */}

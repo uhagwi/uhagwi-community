@@ -46,7 +46,8 @@ export type SampleHarness = {
   comments: SampleComment[];
   tags: string[];
   view_count: number;
-  thumbnail_emoji: string; // MVP 썸네일 대용
+  thumbnail_emoji: string; // 캐릭터 이미지 미생성 시 fallback
+  thumbnail_url: string | null; // /characters/{slug}.png — 없으면 emoji fallback
   category: 'verify' | 'improve' | 'proposal' | 'develop';
 };
 
@@ -131,6 +132,7 @@ const verifyHarness: SampleHarness = {
   tags: ['검증', '품질관리', '감사'],
   view_count: 1247,
   thumbnail_emoji: '🔍',
+  thumbnail_url: '/characters/verify-harness.png',
   category: 'verify',
   comments: [
     {
@@ -226,6 +228,7 @@ const improveHarness: SampleHarness = {
   tags: ['개선', '리팩터링', '퇴고'],
   view_count: 892,
   thumbnail_emoji: '✨',
+  thumbnail_url: '/characters/improve-harness.png',
   category: 'improve',
   comments: [
     {
@@ -317,6 +320,7 @@ const proposalHarness: SampleHarness = {
   tags: ['제안서', '공공사업', '자동화'],
   view_count: 1583,
   thumbnail_emoji: '📝',
+  thumbnail_url: '/characters/proposal-harness.png',
   category: 'proposal',
   comments: [
     {
@@ -440,6 +444,7 @@ const serviceDevHarness: SampleHarness = {
   tags: ['서비스개발', 'SaaS', '창업'],
   view_count: 2104,
   thumbnail_emoji: '🏗️',
+  thumbnail_url: '/characters/service-dev-harness.png',
   category: 'develop',
   comments: [
     {

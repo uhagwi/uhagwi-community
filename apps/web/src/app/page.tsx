@@ -11,7 +11,7 @@
  *  6) Final CTA — "내 하네스 자랑하러 가자"
  */
 import Link from 'next/link';
-import Image from 'next/image';
+import { HeroLogoCarousel } from '@/components/hero-logo-carousel';
 import {
   AnalogyCard,
   TargetCard,
@@ -65,17 +65,8 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {/* 우: 마스코트 */}
-          <div className="relative mx-auto aspect-square w-full max-w-[360px] md:max-w-[420px]">
-            <Image
-              src="/hero-sealion.svg"
-              alt="우하귀 마스코트 바다사자 — AI 하네스를 끌어안은 모습"
-              fill
-              priority
-              sizes="(max-width: 768px) 80vw, 420px"
-              className="drop-shadow-[0_10px_30px_rgba(58,39,93,0.15)]"
-            />
-          </div>
+          {/* 우: 우하귀 로고 캐러셀 (11종 시안 10초마다 전환) */}
+          <HeroLogoCarousel />
         </div>
       </section>
 

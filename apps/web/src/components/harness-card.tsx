@@ -6,6 +6,7 @@
  * Phase 2: next/image 썸네일 + 상대 시간 포매터 교체.
  */
 import Link from 'next/link';
+import { CharacterThumbnail } from '@/components/character-thumbnail';
 import type { SampleHarness } from '@/data/sample-harnesses';
 import { averageJuzzep, totalReactions } from '@/data/sample-harnesses';
 
@@ -29,6 +30,7 @@ export function HarnessCard({ harness }: HarnessCardProps) {
     reaction_counts,
     comments,
     thumbnail_emoji,
+    thumbnail_url,
     tags,
     view_count,
   } = harness;
@@ -49,12 +51,13 @@ export function HarnessCard({ harness }: HarnessCardProps) {
         className="flex h-full flex-col gap-3"
         aria-label={`${title} 상세 보기`}
       >
-        {/* 썸네일 — MVP 이모지 버전 */}
-        <div
-          aria-hidden="true"
-          className="flex aspect-video w-full items-center justify-center overflow-hidden rounded-[10px] bg-gradient-to-br from-brand-100 via-cream-100 to-mint-400/30 text-6xl transition group-hover:scale-[1.02]"
-        >
-          <span>{thumbnail_emoji}</span>
+        {/* 썸네일 — 캐릭터 이미지 우선, 404·없으면 emoji fallback */}
+        <div className="relative flex aspect-video w-full items-center justify-center overflow-hidden rounded-[10px] bg-gradient-to-br from-brand-100 via-cream-100 to-mint-400/30 transition group-hover:scale-[1.02]">
+          <CharacterThumbnail
+            src={thumbnail_url}
+            fallbackEmoji={thumbnail_emoji}
+            alt={`${title} 캐릭터`}
+          />
         </div>
 
         <div className="flex flex-1 flex-col gap-1">
