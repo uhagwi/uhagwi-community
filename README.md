@@ -106,6 +106,25 @@ pnpm dev
 
 ---
 
+## 배포 (Vercel)
+
+> 상세 절차는 `CONNECT.md` 참조 — Discord/Supabase/Vercel 전체 연결 가이드.
+
+Vercel 임포트 시 **중요 설정**:
+- Framework Preset: `Next.js`
+- Root Directory: `apps/web`
+- Install Command: `cd ../.. && pnpm install --frozen-lockfile`
+- Build Command: Vercel 자동 감지 (또는 `cd ../.. && pnpm turbo run build --filter=@uhagwi/web`)
+- Region: `icn1` (서울)
+
+루트의 `vercel.json`이 기본값을 제공하지만, 대시보드 설정이 우선한다.
+
+환경변수 8개 필요 (`CONNECT.md` §3-2 참조):
+`NEXTAUTH_URL`, `NEXTAUTH_SECRET`, `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`,
+`SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `DISCORD_BOT_WEBHOOK_SECRET`
+
+---
+
 ## 확장 가이드
 
 - **새 앱 추가**(예: 모바일·관리자): `apps/<name>/` 생성 후 `pnpm-workspace.yaml`에 자동 포함

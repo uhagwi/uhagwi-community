@@ -21,6 +21,11 @@ export const metadata: Metadata = {
     description: '내 AI 하네스 자랑하고 주접 받기',
     locale: 'ko_KR',
     type: 'website',
+    images: [{ url: '/og-image.svg', width: 1200, height: 630, alt: '우하귀 — 우리 하네스 귀엽지' }],
+  },
+  icons: {
+    icon: '/logo-mark.svg',
+    shortcut: '/logo-mark.svg',
   },
   robots: { index: true, follow: true },
 };

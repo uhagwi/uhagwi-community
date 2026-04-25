@@ -1,5 +1,5 @@
-import type { ReactionType } from '../types.js';
-import { REACTION_META } from '../types.js';
+import type { ReactionType } from '../types';
+import { REACTION_META } from '../types';
 
 interface Props {
   type: ReactionType;

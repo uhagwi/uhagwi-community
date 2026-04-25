@@ -1,0 +1,47 @@
+<!-- 우하귀 Hero 플레이스홀더 — 바다사자 추상 아트 · brand 컬러 -->
+<!-- 나중에 실제 마스코트 이미지(logo_v2_sealion_hug.png)로 교체 -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" role="img" aria-label="우하귀 바다사자 마스코트 (플레이스홀더)">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#fdf8e8" />
+      <stop offset="100%" stop-color="#e8e1f5" />
+    </linearGradient>
+    <radialGradient id="sealion" cx="50%" cy="45%" r="50%">
+      <stop offset="0%" stop-color="#7a5fbf" />
+      <stop offset="100%" stop-color="#38275d" />
+    </radialGradient>
+  </defs>
+
+  <!-- 배경 라운드 -->
+  <rect width="400" height="400" rx="32" fill="url(#bg)" />
+
+  <!-- 물결 장식 -->
+  <path d="M 0 300 Q 100 270 200 300 T 400 300 L 400 400 L 0 400 Z" fill="#a8e6d0" opacity="0.35" />
+  <path d="M 0 320 Q 100 295 200 320 T 400 320 L 400 400 L 0 400 Z" fill="#7de0c5" opacity="0.35" />
+
+  <!-- 바다사자 몸통 (타원) -->
+  <ellipse cx="200" cy="220" rx="110" ry="85" fill="url(#sealion)" />
+
+  <!-- 머리 -->
+  <circle cx="200" cy="150" r="62" fill="url(#sealion)" />
+
+  <!-- 지느러미 -->
+  <ellipse cx="110" cy="230" rx="34" ry="18" fill="#26193c" transform="rotate(-20 110 230)" />
+  <ellipse cx="290" cy="230" rx="34" ry="18" fill="#26193c" transform="rotate(20 290 230)" />
+
+  <!-- 눈 -->
+  <circle cx="180" cy="145" r="6" fill="#fffdf7" />
+  <circle cx="222" cy="145" r="6" fill="#fffdf7" />
+  <circle cx="181" cy="146" r="3" fill="#1a1622" />
+  <circle cx="223" cy="146" r="3" fill="#1a1622" />
+
+  <!-- 코 -->
+  <ellipse cx="201" cy="165" rx="6" ry="4" fill="#1a1622" />
+
+  <!-- 하네스(마구) 띠 — 브랜드 정체성 상징 -->
+  <path d="M 140 200 Q 200 180 260 200" stroke="#ff3d85" stroke-width="6" fill="none" stroke-linecap="round" />
+  <circle cx="200" cy="188" r="8" fill="#ff6fa3" />
+
+  <!-- 하이라이트 -->
+  <circle cx="170" cy="125" r="12" fill="#fffdf7" opacity="0.18" />
+</svg>

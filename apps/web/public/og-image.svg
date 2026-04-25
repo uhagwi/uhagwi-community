@@ -1,0 +1,22 @@
+<!-- 우하귀 OG 이미지 (1200x630) · 로고 + 슬로건 -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" role="img" aria-label="우하귀 — 우리 하네스 귀엽지">
+  <defs>
+    <linearGradient id="ogbg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#fdf8e8" />
+      <stop offset="100%" stop-color="#e8e1f5" />
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#ogbg)" />
+  <circle cx="220" cy="315" r="110" fill="#4a357e" />
+  <text x="220" y="350" font-size="110" font-weight="700" text-anchor="middle"
+        fill="#fffdf7" font-family="Pretendard Variable, sans-serif">우</text>
+  <text x="400" y="270" font-size="64" font-weight="700"
+        fill="#26193c" font-family="Pretendard Variable, sans-serif">우하귀</text>
+  <text x="400" y="350" font-size="40" font-weight="500"
+        fill="#4a357e" font-family="Pretendard Variable, sans-serif">내 하네스 보러 올래?</text>
+  <text x="400" y="410" font-size="26" font-weight="400"
+        fill="#5b5370" font-family="Pretendard Variable, sans-serif">AI를 업무에 엮는 사람들이 서로 자랑하고 배우는 커뮤니티</text>
+  <rect x="400" y="460" width="220" height="56" rx="10" fill="#5d44a0" />
+  <text x="510" y="496" font-size="22" font-weight="600" text-anchor="middle"
+        fill="#fffdf7" font-family="Pretendard Variable, sans-serif">Discord 입장하기</text>
+</svg>
