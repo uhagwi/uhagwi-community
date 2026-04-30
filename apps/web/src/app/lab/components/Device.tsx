@@ -206,7 +206,7 @@ export function DeviceView({
                   <span>{h.label}</span>
                   <span style={{ color: '#4b5563' }}>{relTime(h.t)}</span>
                 </div>
-                {h.note && <div style={{ marginTop: 3, color: '#94a3b8', fontSize: 10, fontStyle: 'italic' }}>"{h.note}"</div>}
+                {h.note && <div style={{ marginTop: 3, color: '#94a3b8', fontSize: 10, fontStyle: 'italic' }}>&ldquo;{h.note}&rdquo;</div>}
               </div>
             ))}
           </div>

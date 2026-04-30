@@ -150,7 +150,7 @@ export function InsightsView({ creature }: { creature: Creature }) {
                   <span>{FOODS[n.foodType!]?.emoji} {FOODS[n.foodType!]?.label}</span>
                   <span style={{ color: '#4b5563', fontSize: 9 }}>{relTime(n.t)}</span>
                 </div>
-                <div style={{ color: '#94a3b8', fontStyle: 'italic' }}>"{n.note}"</div>
+                <div style={{ color: '#94a3b8', fontStyle: 'italic' }}>&ldquo;{n.note}&rdquo;</div>
               </div>
             ))}
           </div>
