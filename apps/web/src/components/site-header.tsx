@@ -15,6 +15,7 @@ import { auth } from '@/lib/auth';
 const NAV_ITEMS = [
   { href: '/', label: '홈' },
   { href: '/harnesses', label: '갤러리' },
+  { href: '/lab', label: '🧬 랩' },
   { href: '/about', label: 'About' },
   { href: '/join', label: 'Discord' },
 ] as const;
