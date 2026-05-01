@@ -2,23 +2,32 @@
  * /api/webhooks/bot — Discord 봇 이벤트 수신
  * 근거: docs/service-dev/02_design/api.md §3-2
  *
- * 인증: X-Bot-Signature (HMAC-SHA256) + X-Bot-Timestamp (5분 윈도우)
+ * 인증: X-Bot-Signature (HMAC-SHA256, sha256= 프리픽스) + X-Bot-Timestamp (5분 윈도우)
  * 이벤트:
- *   member.joined  → users.status=active, 환영 DM
- *   member.kicked  → users.can_post=false
- *   message.reacted (Phase 2) → 웹 카운트 가산
+ *   member.joined  → users(discord_id) status=active + can_post=true (없으면 placeholder)
+ *   member.kicked  → users(discord_id) can_post=false + status=suspended
+ *   message.reacted → Phase 2 (웹 카운트 가산) — not-implemented
  *   bot.health     → 응답만 기록
  */
 import { NextRequest } from 'next/server';
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { z } from 'zod';
-import { problem, notImplemented } from '@/lib/problem';
+import { problem, notImplemented, internal } from '@/lib/problem';
 import { checkRateLimit } from '@/lib/rate-limit';
+import { getDb } from '@/lib/db';
 
-const BotEventSchema = z.object({
-  event: z.enum(['member.joined', 'member.kicked', 'message.reacted', 'bot.health']),
-  payload: z.record(z.unknown()).optional(),
+const MemberPayload = z.object({
+  discord_id: z.string().min(1),
+  username: z.string().nullish(),
+  global_name: z.string().nullish(),
 });
+
+const BotEventSchema = z.discriminatedUnion('event', [
+  z.object({ event: z.literal('member.joined'), payload: MemberPayload }),
+  z.object({ event: z.literal('member.kicked'), payload: MemberPayload }),
+  z.object({ event: z.literal('message.reacted'), payload: z.record(z.unknown()).optional() }),
+  z.object({ event: z.literal('bot.health'), payload: z.record(z.unknown()).optional() }),
+]);
 
 const TIMESTAMP_WINDOW_SEC = 5 * 60;
 
@@ -38,6 +47,69 @@ function verifySignature(
   } catch {
     return false;
   }
+}
+
+type MemberPayloadT = z.infer<typeof MemberPayload>;
+
+async function handleMemberJoined(p: MemberPayloadT): Promise<Response> {
+  const db = getDb();
+  const displayName = p.global_name ?? p.username ?? `user_${p.discord_id.slice(-6)}`;
+  const handle = `pending_${p.discord_id.slice(-8)}`.toLowerCase();
+
+  const { data: existing } = await db
+    .from('users')
+    .select('id, status, can_post')
+    .eq('discord_id', p.discord_id)
+    .maybeSingle();
+
+  if (existing) {
+    const { error } = await db
+      .from('users')
+      .update({ status: 'active', can_post: true, updated_at: new Date().toISOString() })
+      .eq('id', existing.id);
+    if (error) return internal(`users update 실패: ${error.message}`);
+    return Response.json({ ok: true, action: 'reactivated', user_id: existing.id });
+  }
+
+  const { data: inserted, error: insErr } = await db
+    .from('users')
+    .insert({
+      discord_id: p.discord_id,
+      handle,
+      display_name: displayName,
+      status: 'active',
+      can_post: true,
+    })
+    .select('id')
+    .single();
+  if (insErr || !inserted) {
+    return internal(`users insert 실패: ${insErr?.message ?? 'unknown'}`);
+  }
+  return Response.json({ ok: true, action: 'created', user_id: inserted.id });
+}
+
+async function handleMemberKicked(p: MemberPayloadT): Promise<Response> {
+  const db = getDb();
+  const { data: existing } = await db
+    .from('users')
+    .select('id')
+    .eq('discord_id', p.discord_id)
+    .maybeSingle();
+
+  if (!existing) {
+    return Response.json({ ok: true, action: 'noop_no_user' });
+  }
+
+  const { error } = await db
+    .from('users')
+    .update({
+      status: 'suspended',
+      can_post: false,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', existing.id);
+  if (error) return internal(`users suspend 실패: ${error.message}`);
+  return Response.json({ ok: true, action: 'suspended', user_id: existing.id });
 }
 
 export async function POST(req: NextRequest) {
@@ -79,13 +151,14 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  // TODO: 구현 — event 분기 처리
-  //   member.joined → users.status='active', 환영 DM 큐
-  //   member.kicked → users.can_post=false
-  //   message.reacted → Phase 2 (웹 카운트 가산)
-  //   bot.health → 단순 OK 반환
-  if (parsed.data.event === 'bot.health') {
-    return Response.json({ ok: true, received_at: new Date().toISOString() });
+  switch (parsed.data.event) {
+    case 'bot.health':
+      return Response.json({ ok: true, received_at: new Date().toISOString() });
+    case 'member.joined':
+      return handleMemberJoined(parsed.data.payload);
+    case 'member.kicked':
+      return handleMemberKicked(parsed.data.payload);
+    case 'message.reacted':
+      return notImplemented('message.reacted — Phase 2 대기');
   }
-  return notImplemented(`webhook ${parsed.data.event} — 구현 대기`);
 }
