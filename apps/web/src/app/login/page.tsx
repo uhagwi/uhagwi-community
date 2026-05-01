@@ -3,17 +3,36 @@
  * 근거: docs/service-dev/02_design/ui.md §2-5 · api.md §2-1 Auth
  *
  * Discord OAuth 단일 (MVP). `redirect` 쿼리스트링으로 복귀 URL 보존.
- * TODO: 구현 — NextAuth signIn('discord', { callbackUrl })
+ * 보안: open redirect 방어 — same-origin 상대경로만 허용.
  */
+import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import { signIn } from '@/lib/auth';
+import { auth, signIn } from '@/lib/auth';
 
 export const metadata = { title: '로그인' };
 
 type SearchParams = { redirect?: string };
 
-export default function LoginPage({ searchParams }: { searchParams: SearchParams }) {
-  const callbackUrl = searchParams.redirect ?? '/';
+/** 외부 URL·protocol-relative URL 차단. `/`로 시작하는 상대경로만 허용. */
+function safeCallback(raw: string | undefined): string {
+  if (!raw) return '/';
+  if (!raw.startsWith('/')) return '/';
+  if (raw.startsWith('//')) return '/';
+  return raw;
+}
+
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: SearchParams;
+}) {
+  const callbackUrl = safeCallback(searchParams.redirect);
+
+  // 이미 인증되어 있으면 바로 복귀
+  const session = await auth();
+  if (session?.user?.discordId) {
+    redirect(callbackUrl);
+  }
 
   async function doSignIn() {
     'use server';
@@ -26,12 +45,8 @@ export default function LoginPage({ searchParams }: { searchParams: SearchParams
         <p className="text-5xl" aria-hidden="true">
           🌊
         </p>
-        <h1 className="font-display text-3xl font-bold text-brand-900">
-          우하귀
-        </h1>
-        <p className="text-[color:var(--color-ink-600)]">
-          하네스 보러 오느라 반가워
-        </p>
+        <h1 className="font-display text-3xl font-bold text-brand-900">우하귀</h1>
+        <p className="text-[color:var(--color-ink-600)]">하네스 보러 오느라 반가워</p>
       </div>
 
       <form action={doSignIn}>
