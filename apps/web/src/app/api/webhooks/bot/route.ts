@@ -17,19 +17,21 @@ import { checkRateLimit } from '@/lib/rate-limit';
 
 const BotEventSchema = z.object({
   event: z.enum(['member.joined', 'member.kicked', 'message.reacted', 'bot.health']),
-  discord_user_id: z.string().optional(),
   payload: z.record(z.unknown()).optional(),
-  timestamp: z.number().int(),
 });
 
-const TIMESTAMP_WINDOW_MS = 5 * 60 * 1000;
+const TIMESTAMP_WINDOW_SEC = 5 * 60;
 
-/** HMAC 서명 검증 — 실패 시 null 반환 */
-function verifySignature(raw: string, signature: string | null, secret: string | undefined): boolean {
+function verifySignature(
+  signed: string,
+  signature: string | null,
+  secret: string | undefined,
+): boolean {
   if (!signature || !secret) return false;
-  const expected = createHmac('sha256', secret).update(raw).digest('hex');
+  const sigHex = signature.startsWith('sha256=') ? signature.slice(7) : signature;
+  const expected = createHmac('sha256', secret).update(signed).digest('hex');
   try {
-    const a = Buffer.from(signature, 'hex');
+    const a = Buffer.from(sigHex, 'hex');
     const b = Buffer.from(expected, 'hex');
     if (a.length !== b.length) return false;
     return timingSafeEqual(a, b);
@@ -39,14 +41,24 @@ function verifySignature(raw: string, signature: string | null, secret: string |
 }
 
 export async function POST(req: NextRequest) {
-  // Rate limit: bot — 120/60s/global
   const rl = await checkRateLimit('bot', 'global');
   if (!rl.ok) return problem('rate-limit');
 
   const signature = req.headers.get('x-bot-signature');
+  const timestamp = req.headers.get('x-bot-timestamp');
   const raw = await req.text();
 
-  if (!verifySignature(raw, signature, process.env.DISCORD_BOT_WEBHOOK_SECRET)) {
+  if (!timestamp || !/^\d+$/.test(timestamp)) {
+    return problem('forbidden', { detail: 'X-Bot-Timestamp 누락 또는 형식 오류' });
+  }
+
+  const nowSec = Math.floor(Date.now() / 1000);
+  if (Math.abs(nowSec - Number(timestamp)) > TIMESTAMP_WINDOW_SEC) {
+    return problem('forbidden', { detail: '타임스탬프 윈도우 초과' });
+  }
+
+  const signed = `${timestamp}.${raw}`;
+  if (!verifySignature(signed, signature, process.env.DISCORD_BOT_WEBHOOK_SECRET)) {
     return problem('forbidden', { detail: 'HMAC 서명 검증 실패' });
   }
 
@@ -65,12 +77,6 @@ export async function POST(req: NextRequest) {
         message: e.message,
       })),
     });
-  }
-
-  // 타임스탬프 replay 방어
-  const now = Date.now();
-  if (Math.abs(now - parsed.data.timestamp) > TIMESTAMP_WINDOW_MS) {
-    return problem('forbidden', { detail: '타임스탬프 윈도우 초과' });
   }
 
   // TODO: 구현 — event 분기 처리
