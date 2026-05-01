@@ -1,5 +1,5 @@
 /**
- * Rate Limit — Upstash Redis sliding window
+ * Rate Limit — sliding window (Upstash REST 우선, in-memory 폴백).
  * 근거: docs/service-dev/02_design/api.md §1-4
  *
  * 스코프별 정책:
@@ -9,9 +9,6 @@
  *   reaction : 60/60s/user
  *   publish  : 5/10min/user
  *   bot      : 120/60s/global
- *
- * TODO: 구현 — @upstash/ratelimit 패키지 도입 또는 REST 직접 호출
- *   - Idempotency-Key 헤더 병행 (reaction·comment 낙관적 업데이트 중복 방지)
  */
 
 export type RateLimitScope = 'pub' | 'write' | 'juzzep' | 'reaction' | 'publish' | 'bot';
@@ -23,7 +20,7 @@ export type RateLimitResult = {
   remaining: number;
   /** reset 초 단위 epoch */
   reset: number;
-  /** 사람이 읽을 Retry-After 초 */
+  /** Retry-After 초 */
   retryAfter?: number;
 };
 
@@ -36,21 +33,102 @@ const POLICIES: Record<RateLimitScope, { limit: number; windowSec: number }> = {
   bot: { limit: 120, windowSec: 60 },
 };
 
-/**
- * 키 구성: `rl:{scope}:{identifier}` (identifier 는 user_id, ip, 또는 "global")
- * TODO: 구현 — Upstash Redis sliding window 알고리즘
- */
+const UPSTASH_URL = process.env.UPSTASH_REDIS_REST_URL;
+const UPSTASH_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
+const UPSTASH_ENABLED = Boolean(UPSTASH_URL && UPSTASH_TOKEN);
+
+const memBuckets = new Map<string, number[]>();
+const MEM_MAX_KEYS = 10_000;
+
+function buildKey(scope: RateLimitScope, identifier: string): string {
+  return `rl:${scope}:${identifier}`;
+}
+
+function memCheck(key: string, limit: number, windowSec: number): RateLimitResult {
+  const now = Date.now();
+  const cutoff = now - windowSec * 1000;
+  const arr = memBuckets.get(key) ?? [];
+  const fresh = arr.filter((t) => t > cutoff);
+
+  if (fresh.length >= limit) {
+    const oldest = fresh[0] ?? now;
+    const resetMs = oldest + windowSec * 1000;
+    return {
+      ok: false,
+      remaining: 0,
+      reset: Math.floor(resetMs / 1000),
+      retryAfter: Math.max(1, Math.ceil((resetMs - now) / 1000)),
+    };
+  }
+
+  fresh.push(now);
+  memBuckets.set(key, fresh);
+
+  if (memBuckets.size > MEM_MAX_KEYS) {
+    const stalest = [...memBuckets.entries()]
+      .sort((a, b) => (a[1][a[1].length - 1] ?? 0) - (b[1][b[1].length - 1] ?? 0))
+      .slice(0, Math.floor(MEM_MAX_KEYS / 4));
+    for (const [k] of stalest) memBuckets.delete(k);
+  }
+
+  return {
+    ok: true,
+    remaining: Math.max(0, limit - fresh.length),
+    reset: Math.floor((now + windowSec * 1000) / 1000),
+  };
+}
+
+async function upstashCheck(
+  key: string,
+  limit: number,
+  windowSec: number,
+): Promise<RateLimitResult> {
+  const nowMs = Date.now();
+  const member = `${nowMs}-${Math.random().toString(36).slice(2, 10)}`;
+  const cutoff = nowMs - windowSec * 1000;
+
+  const pipeline = [
+    ['ZREMRANGEBYSCORE', key, '0', String(cutoff)],
+    ['ZADD', key, String(nowMs), member],
+    ['ZCARD', key],
+    ['EXPIRE', key, String(windowSec)],
+  ];
+
+  const res = await fetch(`${UPSTASH_URL}/pipeline`, {
+    method: 'POST',
+    headers: {
+      authorization: `Bearer ${UPSTASH_TOKEN}`,
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify(pipeline),
+    cache: 'no-store',
+  });
+
+  if (!res.ok) throw new Error(`Upstash HTTP ${res.status}`);
+  const out = (await res.json()) as Array<{ result: number | string }>;
+  const count = Number(out[2]?.result ?? 0);
+  const ok = count <= limit;
+  return {
+    ok,
+    remaining: Math.max(0, limit - count),
+    reset: Math.floor((nowMs + windowSec * 1000) / 1000),
+    retryAfter: ok ? undefined : windowSec,
+  };
+}
+
 export async function checkRateLimit(
   scope: RateLimitScope,
   identifier: string,
 ): Promise<RateLimitResult> {
   const policy = POLICIES[scope];
-  // TODO: 구현 — Upstash fetch(REST) 또는 SDK 호출
-  // 임시: 항상 통과. 실제 운영 전 반드시 구현 필요.
-  void identifier;
-  return {
-    ok: true,
-    remaining: policy.limit,
-    reset: Math.floor(Date.now() / 1000) + policy.windowSec,
-  };
+  const key = buildKey(scope, identifier);
+
+  if (UPSTASH_ENABLED) {
+    try {
+      return await upstashCheck(key, policy.limit, policy.windowSec);
+    } catch (err) {
+      console.warn('[rate-limit] Upstash 실패 → 메모리 폴백', err);
+    }
+  }
+  return memCheck(key, policy.limit, policy.windowSec);
 }
