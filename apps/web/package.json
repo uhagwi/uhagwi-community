@@ -16,6 +16,7 @@
     "node": "20.x"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
     "@auth/core": "^0.40.0",
     "@auth/supabase-adapter": "^1.4.0",
     "@supabase/ssr": "^0.5.2",

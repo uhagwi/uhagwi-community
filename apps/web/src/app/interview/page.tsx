@@ -1,170 +1,165 @@
 'use client';
 
 /**
- * 우하귀 인터뷰 `/interview` — Stage 1 진단의 1차 입력.
- * 30문항 시퀀셜, localStorage 영속, Ctrl+Enter 단축키.
+ * 우하귀 인터뷰 v0.2 — 챗봇 기반 자연 대화 진단.
  *
- * 다음 단계 (다음 세션 구현 대기):
- * - 응답 → Anthropic API → 페르소나 진술 + 자동화 후보 진단
- * - 결과 페이지(/result) — A+B+C+F+J 5종 디자인
- * - creature 1마리 부여, MCP 설치 가이드, Pro 결제 게이트
+ * 흐름:
+ * 1. 첫 진입 시 AI 인사 자동 표시
+ * 2. 사용자 답변 → Anthropic Haiku 4.5 스트리밍 응답
+ * 3. AI가 5 영역 자연 대화로 cover (15~25턴)
+ * 4. AI가 충분하다 판단 → [INTERVIEW_COMPLETE] 토큰 → 자동으로 Opus 4.7 종합 분석
+ * 5. 페르소나 + 자동화 후보 톱5 카드 표시
+ *
+ * v0.1 시퀀셜 폼은 폐기됨 (questions.ts 데이터는 system-prompt 가이드로 활용).
  */
 
 import Link from 'next/link';
-import { QuestionCard } from './components/QuestionCard';
-import { InterviewSummary } from './components/InterviewSummary';
-import { useInterviewState } from './use-interview-state';
-import { TOTAL_QUESTIONS } from './questions';
+import { useEffect, useRef } from 'react';
+import { ChatMessage } from './components/ChatMessage';
+import { ChatInput } from './components/ChatInput';
+import { AnalysisCard } from './components/AnalysisCard';
+import { useChatState } from './use-chat-state';
 
 export default function InterviewPage() {
-  const {
-    hydrated,
-    state,
-    currentQuestion,
-    answeredCount,
-    progressPct,
-    start,
-    answer,
-    next,
-    prev,
-    reset,
-    exportJson,
-  } = useInterviewState();
+  const { hydrated, state, streaming, error, sendUser, reset, exportJson } =
+    useChatState();
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  // 새 메시지·스트리밍 시 하단 스크롤
+  useEffect(() => {
+    scrollRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  }, [state.messages.length, streaming, state.analyzing, state.analysis]);
 
   if (!hydrated) {
     return (
-      <div className="mx-auto max-w-[680px] py-16 text-center">
+      <div className="mx-auto max-w-[760px] py-16 text-center">
         <p className="text-sm text-[color:var(--color-ink-600)]">불러오는 중…</p>
       </div>
     );
   }
 
-  // 종료 상태
-  if (state.done) {
-    return (
-      <div className="mx-auto max-w-[760px]">
-        <InterviewSummary
-          answers={state.answers}
-          startedAt={state.startedAt}
-          finishedAt={state.finishedAt}
-          exportJson={exportJson}
-          onReset={reset}
-        />
-      </div>
-    );
-  }
+  const lastMsg = state.messages[state.messages.length - 1];
+  const lastIsAssistant = lastMsg?.role === 'assistant';
 
-  // 시작 전 화면
-  if (!state.startedAt && state.currentIndex === 0 && answeredCount === 0) {
-    return <StartScreen onStart={start} />;
-  }
-
-  // 인터뷰 진행 중 (currentQuestion은 hydrated && !done 일 때만 사용)
-  if (!currentQuestion) {
-    return (
-      <div className="mx-auto max-w-[680px] py-16 text-center">
-        <p className="text-sm text-[color:var(--color-ink-600)]">불러오는 중…</p>
-      </div>
-    );
-  }
-  const cq = currentQuestion;
   return (
-    <div className="mx-auto max-w-[760px] space-y-5">
-      <ProgressBar
-        currentIndex={state.currentIndex}
-        answeredCount={answeredCount}
-        progressPct={progressPct}
-      />
-      <QuestionCard
-        question={cq}
-        initialAnswer={state.answers[cq.id] ?? ''}
-        onSubmit={(text) => {
-          answer(cq.id, text);
-          next();
-        }}
-        onPrev={prev}
-        onSkip={next}
-        isFirst={state.currentIndex === 0}
-        isLast={state.currentIndex === TOTAL_QUESTIONS - 1}
-      />
-      <p className="text-center text-[11px] text-[color:var(--color-ink-600)]">
-        답변은 자동으로 브라우저에 저장됩니다 — 닫고 나중에 이어가도 됩니다.
-      </p>
-    </div>
-  );
-}
-
-function StartScreen({ onStart }: { onStart: () => void }) {
-  return (
-    <div className="mx-auto max-w-[680px] py-8">
-      <div className="card text-center md:p-10">
-        <p className="text-4xl">🌊</p>
-        <h1 className="mt-4 font-display text-2xl font-bold text-brand-900 md:text-3xl">
-          AI가 진단하고, AI가 일한다.
-        </h1>
-        <p className="mt-3 text-sm leading-relaxed text-[color:var(--color-ink-600)] md:text-base">
-          30분이면 AI가 당신 일을 알아냅니다.
-          <br />
-          5섹션 30문항 — 짧게 답해도 됩니다. 모르면 건너뛰셔도 됩니다.
-        </p>
-
-        <div className="mt-6 grid grid-cols-2 gap-2 text-left text-xs md:grid-cols-5 md:text-sm">
-          <Section label="정체성" />
-          <Section label="도메인·일과" />
-          <Section label="도구" />
-          <Section label="고통·욕망" />
-          <Section label="학습·진화" />
+    <div className="-mx-4 -my-8 flex min-h-[calc(100vh-4rem)] flex-col md:-mx-6 md:-my-12">
+      {/* 헤더 */}
+      <div className="border-b border-brand-100 bg-cream-50 px-4 py-3 md:px-6">
+        <div className="mx-auto flex max-w-[760px] items-center justify-between">
+          <div>
+            <p className="text-sm font-bold text-brand-900">🌊 우하귀 진단 도반</p>
+            <p className="text-xs text-[color:var(--color-ink-600)]">
+              {state.done
+                ? '진단 완료 — 결과는 아래'
+                : state.analyzing
+                  ? '대화 종료 · 종합 분석 중…'
+                  : '편하게 대화해주세요. 30분 정도면 충분해요.'}
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Link href="/" className="btn-ghost text-xs">
+              홈
+            </Link>
+            <button
+              type="button"
+              onClick={() => {
+                if (confirm('정말 처음부터 다시 시작할까요? 지금까지 대화는 사라져요.')) reset();
+              }}
+              className="btn-ghost text-xs"
+            >
+              처음부터
+            </button>
+          </div>
         </div>
-
-        <button type="button" onClick={onStart} className="btn-cta mt-7 w-full sm:w-auto">
-          시작하기 →
-        </button>
-
-        <p className="mt-4 text-xs text-[color:var(--color-ink-600)]">
-          답변은 자동 저장됩니다 (브라우저 localStorage). 다음 세션에서 페르소나 진단으로 이어집니다.
-          <br />
-          <Link href="/" className="underline hover:text-brand-700">
-            ← 홈으로 돌아가기
-          </Link>
-        </p>
       </div>
-    </div>
-  );
-}
 
-function Section({ label }: { label: string }) {
-  return (
-    <div className="rounded-card bg-cream-50 px-3 py-2 text-center">
-      <span className="text-brand-800">{label}</span>
-    </div>
-  );
-}
+      {/* 메시지 영역 */}
+      <div className="flex-1 overflow-y-auto px-4 py-6 md:px-6">
+        <div className="mx-auto max-w-[760px] space-y-4">
+          {state.messages.map((m, i) => (
+            <ChatMessage
+              key={m.id}
+              message={m}
+              streaming={streaming && i === state.messages.length - 1 && m.role === 'assistant'}
+            />
+          ))}
 
-function ProgressBar({
-  currentIndex,
-  answeredCount,
-  progressPct,
-}: {
-  currentIndex: number;
-  answeredCount: number;
-  progressPct: number;
-}) {
-  return (
-    <div className="card md:p-5">
-      <div className="flex items-center justify-between text-xs">
-        <span className="text-brand-700">
-          진행 {currentIndex + 1} / {TOTAL_QUESTIONS}
-        </span>
-        <span className="text-[color:var(--color-ink-600)]">
-          답변 {answeredCount}개 · {progressPct}%
-        </span>
+          {state.analyzing ? (
+            <div className="card text-center md:p-5">
+              <p className="text-2xl">🔬</p>
+              <p className="mt-2 text-sm font-bold text-brand-900">종합 분석 중…</p>
+              <p className="mt-1 text-xs text-[color:var(--color-ink-600)]">
+                Opus 4.7 모델이 대화 전체를 깊이 분석하고 있어요. 30~60초 걸려요.
+              </p>
+            </div>
+          ) : null}
+
+          {state.analyzeError ? (
+            <div className="card text-center md:p-5">
+              <p className="text-sm font-bold text-[color:var(--color-danger)]">
+                분석 실패
+              </p>
+              <p className="mt-1 text-xs text-[color:var(--color-ink-600)]">
+                {state.analyzeError}
+              </p>
+              <p className="mt-2 text-xs text-[color:var(--color-ink-600)]">
+                ANTHROPIC_API_KEY 환경변수가 Vercel에 등록되어 있는지 확인해주세요.
+              </p>
+            </div>
+          ) : null}
+
+          {state.analysis ? <AnalysisCard analysis={state.analysis} /> : null}
+
+          {error ? (
+            <div className="rounded-card border border-[color:var(--color-danger)] bg-red-50 px-4 py-3 text-xs text-[color:var(--color-danger)]">
+              {error}
+            </div>
+          ) : null}
+
+          <div ref={scrollRef} />
+        </div>
       </div>
-      <div className="mt-2 h-2 overflow-hidden rounded-full bg-cream-100">
-        <div
-          className="h-full rounded-full bg-brand-500 transition-all"
-          style={{ width: `${progressPct}%` }}
+
+      {/* 입력 영역 */}
+      {!state.done ? (
+        <ChatInput
+          onSend={sendUser}
+          disabled={streaming || state.analyzing}
+          placeholder={
+            streaming
+              ? '도반이 답하는 중…'
+              : state.analyzing
+                ? '분석 중…'
+                : lastIsAssistant
+                  ? '편하게 답해주세요. 짧아도 됩니다.'
+                  : ''
+          }
         />
-      </div>
+      ) : (
+        <div className="border-t border-brand-100 bg-cream-50 px-4 py-4 md:px-6">
+          <div className="mx-auto flex max-w-[760px] flex-col gap-2 sm:flex-row">
+            <button
+              type="button"
+              onClick={() => {
+                const json = exportJson();
+                const blob = new Blob([json], { type: 'application/json;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `uhagwi-interview-${new Date().toISOString().slice(0, 10)}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+              }}
+              className="btn-ghost flex-1"
+            >
+              대화 JSON 다운로드
+            </button>
+            <Link href="/" className="btn-cta flex-1 text-center">
+              홈으로 돌아가기 →
+            </Link>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
