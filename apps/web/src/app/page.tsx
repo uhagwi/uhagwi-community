@@ -36,24 +36,28 @@ export default function LandingPage() {
           {/* 좌: 카피 + CTA */}
           <div className="text-center md:text-left">
             <p className="mb-4 inline-flex items-center gap-2 rounded-pill bg-white/70 px-3 py-1 text-xs font-medium text-brand-700 ring-1 ring-brand-200">
-              🌊 AI 하네스 커뮤니티 · 모두의 창업 프로젝트 2026
+              🌊 AI 자동화 진단·실행 SaaS · v2 재구축 진행 중
             </p>
             <h1
               id="hero-title"
               className="text-display text-[38px] leading-[1.15] text-brand-900 md:text-[60px] md:leading-[1.1]"
             >
-              내 하네스
+              AI가 진단하고,
               <br />
-              보러 올래?
+              AI가 일한다.
             </h1>
             <p className="mx-auto mt-5 max-w-[460px] text-base text-[color:var(--color-ink-600)] md:mx-0 md:max-w-[520px] md:text-lg md:leading-relaxed">
-              AI를 업무에 엮는 사람들이 서로 자랑하고 배우는 커뮤니티.
+              30분이면 AI가 당신 일을 알아냅니다.
               <br />
-              누구나 자기 하네스를 자식처럼 자랑하고, 주접 댓글로 사랑받는 곳.
+              그다음부턴 Claude·Cursor에서 그 AI가 직접 일합니다.
             </p>
             <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row md:justify-start">
-              <Link href="#" className="btn-cta w-full sm:w-auto" aria-label="Discord 서버 입장">
-                Discord 입장하기 →
+              <Link
+                href="/interview"
+                className="btn-cta w-full sm:w-auto"
+                aria-label="무료 진단 시작"
+              >
+                30분 무료 진단 시작 →
               </Link>
               <Link
                 href="/harnesses"
