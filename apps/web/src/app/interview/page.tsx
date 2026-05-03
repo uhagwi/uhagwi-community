@@ -21,7 +21,7 @@ import { AnalysisCard } from './components/AnalysisCard';
 import { useChatState } from './use-chat-state';
 
 export default function InterviewPage() {
-  const { hydrated, state, streaming, error, sendUser, reset, exportJson } =
+  const { hydrated, state, streaming, error, sendUser, reset, retryAnalyze, exportJson } =
     useChatState();
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -109,15 +109,38 @@ export default function InterviewPage() {
           ) : null}
 
           {state.analyzeError ? (
-            <div className="card text-center md:p-5">
-              <p className="text-sm font-bold text-[color:var(--color-danger)]">
-                분석 실패
+            <div className="card md:p-5">
+              <p className="text-center text-2xl">⚠️</p>
+              <p className="mt-2 text-center text-sm font-bold text-[color:var(--color-danger)]">
+                분석 실패 — 자동 재시도 안 됨
               </p>
-              <p className="mt-1 text-xs text-[color:var(--color-ink-600)]">
+              <p className="mt-2 break-words rounded-card bg-red-50 p-3 text-xs text-[color:var(--color-ink-600)]">
                 {state.analyzeError}
               </p>
-              <p className="mt-2 text-xs text-[color:var(--color-ink-600)]">
-                ANTHROPIC_API_KEY 환경변수가 Vercel에 등록되어 있는지 확인해주세요.
+              <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+                <button
+                  type="button"
+                  onClick={retryAnalyze}
+                  disabled={state.analyzing}
+                  className="btn-cta flex-1 disabled:opacity-50"
+                >
+                  {state.analyzing ? '분석 중…' : '🔄 분석 다시 시도'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (confirm('대화는 유지되고 분석만 다시 시도해요. 인터뷰부터 다시 하려면 "처음부터" 버튼을 누르세요.')) {
+                      retryAnalyze();
+                    }
+                  }}
+                  className="btn-ghost flex-1"
+                >
+                  새로고침 후 다시 시도
+                </button>
+              </div>
+              <p className="mt-3 text-[11px] text-[color:var(--color-ink-600)]">
+                계속 실패하면 페이지 새로고침(Ctrl+Shift+R) 후 *분석 다시 시도* 버튼을 눌러주세요.
+                Vercel 빌드가 적용되는데 1~3분 걸릴 수 있어요.
               </p>
             </div>
           ) : null}

@@ -221,6 +221,36 @@ export function useChatState() {
     [state.messages, state.done, streaming],
   );
 
+  const retryAnalyze = useCallback(async () => {
+    if (state.messages.length < 2) return;
+    setState((s) => ({ ...s, analyzing: true, analyzeError: null }));
+    try {
+      const ar = await fetch('/api/interview/analyze', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          messages: state.messages.map((m) => ({ role: m.role, content: m.content })),
+        }),
+      });
+      if (!ar.ok) {
+        let detail = `HTTP ${ar.status}`;
+        try {
+          const errJson = await ar.json();
+          detail = errJson.detail ?? detail;
+        } catch {
+          const txt = await ar.text();
+          detail = txt.slice(0, 300) || detail;
+        }
+        throw new Error(detail);
+      }
+      const json = (await ar.json()) as { ok: boolean; result: AnalyzeResult };
+      setState((s) => ({ ...s, analysis: json.result, analyzing: false }));
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : '알 수 없는 오류';
+      setState((s) => ({ ...s, analyzeError: msg, analyzing: false }));
+    }
+  }, [state.messages]);
+
   const reset = useCallback(() => {
     abortRef.current?.abort();
     setState(INITIAL_STATE);
@@ -271,6 +301,7 @@ export function useChatState() {
     error,
     sendUser,
     reset,
+    retryAnalyze,
     exportJson,
   };
 }
