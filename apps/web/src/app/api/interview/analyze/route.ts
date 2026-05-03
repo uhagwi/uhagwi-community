@@ -6,6 +6,7 @@
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { INTERVIEW_ANALYZE_PROMPT } from '@/app/interview/system-prompt';
+import { ANALYZE_THEME_PROMPT } from '@/app/interview/themes';
 import { problem } from '@/lib/problem';
 import { checkRateLimit } from '@/lib/rate-limit';
 
@@ -17,8 +18,41 @@ const MessageSchema = z.object({
   content: z.string().min(1).max(8000),
 });
 
+const ThemeIdEnum = z.enum([
+  'energy_map',
+  'weekly_routine',
+  'tools_outputs',
+  'pain_points',
+  'automation_desire',
+  'direction_philosophy',
+]);
+
 const RequestSchema = z.object({
   messages: z.array(MessageSchema).min(2).max(80),
+  theme_id: ThemeIdEnum.optional(),
+});
+
+const ThemeAnalyzeResultSchema = z.object({
+  theme_id: ThemeIdEnum,
+  theme_summary: z.string().min(10).max(800),
+  key_findings: z.array(z.string()).min(2).max(5),
+  auto_candidates: z
+    .array(
+      z.object({
+        rank: z.number().int().min(1).max(10),
+        category: z.enum(['daily', 'weekly', 'one_time', 'social']),
+        title: z.string().min(2).max(80),
+        domain: z.string().min(2).max(40),
+        why: z.string().min(10).max(400),
+        estimated_save_min_per_week: z.number().int().min(0).max(2000),
+      }),
+    )
+    .min(1)
+    .max(6),
+  creature_signal: z
+    .enum(['coder', 'writer', 'analyst', 'designer', 'researcher', 'none'])
+    .default('none'),
+  next_theme_suggestion: ThemeIdEnum.optional(),
 });
 
 const DimensionSchema = z.object({
@@ -133,28 +167,25 @@ export async function POST(req: NextRequest) {
     });
   }
 
+  // theme_id 있으면 테마별 부분 분석 (가벼움), 없으면 종합 분석 (무거움)
+  const isThemeAnalysis = !!parsed.data.theme_id;
+  const systemPrompt = isThemeAnalysis ? ANALYZE_THEME_PROMPT : INTERVIEW_ANALYZE_PROMPT;
+  // 테마 분석은 Haiku로 충분, 종합 분석만 Opus
+  const model = isThemeAnalysis ? 'claude-haiku-4-5-20251001' : 'claude-opus-4-7';
+
   try {
-    // Opus는 messages가 user 메시지로 끝나야 함.
-    // 인터뷰 메시지 전체를 user 메시지 1개로 묶어 전달 (가장 안정적).
     const conversationText = parsed.data.messages
       .map((m) => `[${m.role === 'user' ? '사용자' : '도반'}] ${m.content}`)
       .join('\n\n');
 
-    const userPrompt = `다음은 사용자와 우하귀 진단 도반의 대화 전체입니다.
-시스템 프롬프트의 출력 형식(순수 JSON)에 따라 페르소나를 분석해주세요.
-
----
-
-${conversationText}
-
----
-
-위 대화를 바탕으로 JSON으로만 응답해주세요. 마크다운 코드 펜스 금지.`;
+    const userPrompt = isThemeAnalysis
+      ? `테마: ${parsed.data.theme_id}\n\n다음 대화를 분석해 시스템 프롬프트의 JSON 형식으로만 응답해주세요.\n\n---\n\n${conversationText}\n\n---\n\nJSON만 반환. 마크다운 코드 펜스 금지.`
+      : `다음은 사용자와 우하귀 진단 도반의 대화 전체입니다.\n시스템 프롬프트의 출력 형식(순수 JSON)에 따라 페르소나를 분석해주세요.\n\n---\n\n${conversationText}\n\n---\n\n위 대화를 바탕으로 JSON으로만 응답해주세요. 마크다운 코드 펜스 금지.`;
 
     const result = await callAnthropic(apiKey, {
-      model: 'claude-opus-4-7',
+      model,
       max_tokens: 4096,
-      system: INTERVIEW_ANALYZE_PROMPT,
+      system: systemPrompt,
       messages: [
         {
           role: 'user' as const,
@@ -203,6 +234,26 @@ ${conversationText}
       });
     }
 
+    // 테마 분석은 다른 스키마로 검증
+    if (isThemeAnalysis) {
+      const validated = ThemeAnalyzeResultSchema.safeParse(parsedResult);
+      if (!validated.success) {
+        return problem('internal', {
+          detail: '테마 분석 출력 스키마 검증 실패',
+          errors: validated.error.errors.map((e) => ({
+            field: e.path.join('.'),
+            message: e.message,
+          })),
+        });
+      }
+      return Response.json({
+        ok: true,
+        mode: 'theme',
+        result: validated.data,
+        usage: result.usage,
+      });
+    }
+
     const validated = AnalyzeResultSchema.safeParse(parsedResult);
     if (!validated.success) {
       return problem('internal', {
@@ -216,6 +267,7 @@ ${conversationText}
 
     return Response.json({
       ok: true,
+      mode: 'comprehensive',
       result: validated.data,
       usage: {
         input_tokens: result.usage.input_tokens,

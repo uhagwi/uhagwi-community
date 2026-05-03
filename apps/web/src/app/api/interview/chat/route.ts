@@ -10,6 +10,7 @@
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { INTERVIEW_SYSTEM_PROMPT } from '@/app/interview/system-prompt';
+import { THEMES, buildThemeSystemPrompt, type ThemeId } from '@/app/interview/themes';
 import { problem, internal } from '@/lib/problem';
 import { checkRateLimit } from '@/lib/rate-limit';
 
@@ -23,6 +24,16 @@ const MessageSchema = z.object({
 
 const RequestSchema = z.object({
   messages: z.array(MessageSchema).min(1).max(80),
+  theme_id: z
+    .enum([
+      'energy_map',
+      'weekly_routine',
+      'tools_outputs',
+      'pain_points',
+      'automation_desire',
+      'direction_philosophy',
+    ])
+    .optional(),
 });
 
 type AnthropicResponse = {
@@ -115,11 +126,17 @@ export async function POST(req: NextRequest) {
     });
   }
 
+  // theme_id 있으면 테마별 짧은 인터뷰, 없으면 폴백(전체 인터뷰)
+  const theme = parsed.data.theme_id
+    ? THEMES.find((t) => t.id === parsed.data.theme_id)
+    : null;
+  const systemPrompt = theme ? buildThemeSystemPrompt(theme) : INTERVIEW_SYSTEM_PROMPT;
+
   try {
     const result = await callAnthropic(apiKey, {
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 1024,
-      system: INTERVIEW_SYSTEM_PROMPT,
+      system: systemPrompt,
       messages: parsed.data.messages.map((m) => ({
         role: m.role,
         content: m.content,
