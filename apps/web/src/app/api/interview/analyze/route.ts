@@ -21,26 +21,40 @@ const RequestSchema = z.object({
   messages: z.array(MessageSchema).min(2).max(80),
 });
 
+const DimensionSchema = z.object({
+  score: z.number().int().min(0).max(100),
+  evidence: z.array(z.string()).min(0).max(5),
+  interpretation: z.string().min(0).max(300),
+});
+
 const AnalyzeResultSchema = z.object({
   persona_code: z.string().min(2).max(40),
   persona_name_kr: z.string().min(2).max(80),
-  summary: z.string().min(20).max(800),
+  summary: z.string().min(20).max(1500),
+  dimensions: z.object({
+    domain_breadth: DimensionSchema,
+    automation_drive: DimensionSchema,
+    systems_thinking: DimensionSchema,
+    exploration: DimensionSchema,
+    externalization: DimensionSchema,
+  }),
   strengths: z.array(z.string()).min(1).max(6),
   watch_outs: z.array(z.string()).min(0).max(6),
   auto_candidates: z
     .array(
       z.object({
-        rank: z.number().int().min(1).max(10),
+        rank: z.number().int().min(1).max(15),
+        category: z.enum(['daily', 'weekly', 'one_time', 'social']),
         title: z.string().min(2).max(80),
         domain: z.string().min(2).max(40),
         why: z.string().min(10).max(400),
         estimated_save_min_per_week: z.number().int().min(0).max(2000),
       }),
     )
-    .min(3)
-    .max(8),
+    .min(6)
+    .max(15),
   total_save_min_per_week: z.number().int().min(0).max(10000),
-  recommended_first_demo: z.number().int().min(1).max(10),
+  recommended_first_demo: z.number().int().min(1).max(15),
   creature_type: z.enum(['coder', 'writer', 'analyst', 'designer', 'researcher']),
   creature_personality: z.string().min(2).max(120),
 });

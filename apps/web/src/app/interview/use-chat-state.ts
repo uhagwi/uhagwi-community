@@ -21,16 +21,30 @@ export type ChatMessage = {
 
 export type AutoCandidate = {
   rank: number;
+  category: 'daily' | 'weekly' | 'one_time' | 'social';
   title: string;
   domain: string;
   why: string;
   estimated_save_min_per_week: number;
 };
 
+export type Dimension = {
+  score: number;
+  evidence: string[];
+  interpretation: string;
+};
+
 export type AnalyzeResult = {
   persona_code: string;
   persona_name_kr: string;
   summary: string;
+  dimensions: {
+    domain_breadth: Dimension;
+    automation_drive: Dimension;
+    systems_thinking: Dimension;
+    exploration: Dimension;
+    externalization: Dimension;
+  };
   strengths: string[];
   watch_outs: string[];
   auto_candidates: AutoCandidate[];

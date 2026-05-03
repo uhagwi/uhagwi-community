@@ -41,8 +41,9 @@ export default function InterviewPage() {
   const lastMsg = state.messages[state.messages.length - 1];
   const lastIsAssistant = lastMsg?.role === 'assistant';
   const totalMsgs = state.messages.length;
-  const turnsWarn = totalMsgs >= 16 && totalMsgs < 24 && !state.done; // 8~12턴 권장 한도 임박
-  const turnsCritical = totalMsgs >= 24 && !state.done; // 거의 한계
+  // v0.4: 13~18턴 권장. 메시지 수 = 사용자+AI 합계 (1턴 = 2메시지)
+  const turnsWarn = totalMsgs >= 30 && totalMsgs < 38 && !state.done; // 15~18턴 임박
+  const turnsCritical = totalMsgs >= 38 && !state.done; // 19턴 초과 임박
 
   return (
     <div className="-mx-4 -my-8 flex min-h-[calc(100vh-4rem)] flex-col md:-mx-6 md:-my-12">
@@ -55,8 +56,8 @@ export default function InterviewPage() {
               {state.done
                 ? '진단 완료 — 결과는 아래'
                 : state.analyzing
-                  ? '대화 종료 · 종합 분석 중…'
-                  : `편하게 짧게 답해주세요 · ${Math.ceil(totalMsgs / 2)}/12턴 정도면 충분해요`}
+                  ? '대화 종료 · 5 차원 종합 분석 중…'
+                  : `편하게 답해주세요 · ${Math.ceil(totalMsgs / 2)}/18턴 (13~18턴 권장)`}
             </p>
           </div>
           <div className="flex gap-2">
@@ -81,8 +82,8 @@ export default function InterviewPage() {
         <div className="border-b border-brand-100 bg-yellow-50 px-4 py-2 text-xs md:px-6">
           <p className="mx-auto max-w-[760px] text-[color:var(--color-warning,#a87a00)]">
             {turnsCritical
-              ? `⚠️ 대화가 길어졌어요 (${totalMsgs}메시지) — 챗봇이 곧 자동으로 정리할 거예요.`
-              : `💡 진단 거의 끝나가요 (${Math.ceil(totalMsgs / 2)}/12턴). 곧 챗봇이 마무리해요.`}
+              ? `⚠️ 대화가 길어졌어요 (${Math.ceil(totalMsgs / 2)}턴) — 챗봇이 곧 자동으로 정리할 거예요.`
+              : `💡 진단 거의 끝나가요 (${Math.ceil(totalMsgs / 2)}/18턴). 곧 챗봇이 마무리해요.`}
           </p>
         </div>
       ) : null}
