@@ -169,6 +169,26 @@ ${conversationText}
       });
     }
 
+    // Opus가 빈 placeholder 항목 끼워보내는 경우 필터 (방어적)
+    if (
+      parsedResult &&
+      typeof parsedResult === 'object' &&
+      'auto_candidates' in parsedResult &&
+      Array.isArray((parsedResult as { auto_candidates: unknown[] }).auto_candidates)
+    ) {
+      const obj = parsedResult as { auto_candidates: Array<Record<string, unknown>> };
+      obj.auto_candidates = obj.auto_candidates.filter((c) => {
+        const title = typeof c.title === 'string' ? c.title.trim() : '';
+        const domain = typeof c.domain === 'string' ? c.domain.trim() : '';
+        const why = typeof c.why === 'string' ? c.why.trim() : '';
+        return title.length >= 2 && domain.length >= 2 && why.length >= 10;
+      });
+      // rank 재정렬 (1부터 순차)
+      obj.auto_candidates.forEach((c, i) => {
+        c.rank = i + 1;
+      });
+    }
+
     const validated = AnalyzeResultSchema.safeParse(parsedResult);
     if (!validated.success) {
       return problem('internal', {
