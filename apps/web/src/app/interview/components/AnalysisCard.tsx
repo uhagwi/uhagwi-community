@@ -29,20 +29,28 @@ interface Props {
   analysis: AnalyzeResult;
 }
 
+const VALID_CATEGORIES: AutoCandidate['category'][] = ['daily', 'weekly', 'one_time', 'social'];
+
 export function AnalysisCard({ analysis }: Props) {
-  const emoji = CREATURE_EMOJI[analysis.creature_type];
+  const emoji = CREATURE_EMOJI[analysis.creature_type] ?? '🌊';
   const hours = Math.floor(analysis.total_save_min_per_week / 60);
   const mins = analysis.total_save_min_per_week % 60;
   const totalLabel = hours > 0 ? `주 ${hours}시간 ${mins ? `${mins}분` : ''}` : `주 ${mins}분`;
 
-  // 카테고리별 그룹
+  // 카테고리별 그룹 (옛 데이터·잘못된 enum 방어)
   const grouped: Record<AutoCandidate['category'], AutoCandidate[]> = {
     daily: [],
     weekly: [],
     one_time: [],
     social: [],
   };
-  for (const c of analysis.auto_candidates) grouped[c.category].push(c);
+  const candidates = Array.isArray(analysis.auto_candidates) ? analysis.auto_candidates : [];
+  for (const c of candidates) {
+    const cat: AutoCandidate['category'] = VALID_CATEGORIES.includes(c.category)
+      ? c.category
+      : 'daily';
+    grouped[cat].push(c);
+  }
 
   return (
     <div className="space-y-4">
@@ -70,13 +78,14 @@ export function AnalysisCard({ analysis }: Props) {
         </p>
       </div>
 
-      {/* 5 차원 분석 */}
+      {/* 5 차원 분석 (옛 데이터엔 dimensions 없을 수 있음) */}
+      {analysis.dimensions ? (
       <div className="card md:p-5">
         <p className="text-xs font-bold uppercase tracking-wider text-brand-600">5 차원 종합 분석</p>
         <div className="mt-3 space-y-3">
           {(Object.entries(analysis.dimensions) as Array<
             [keyof AnalyzeResult['dimensions'], AnalyzeResult['dimensions'][keyof AnalyzeResult['dimensions']]]
-          >).map(([key, dim]) => (
+          >).filter(([, dim]) => dim).map(([key, dim]) => (
             <div key={key} className="rounded-card border border-brand-100 p-3">
               <div className="flex items-baseline justify-between">
                 <p className="text-sm font-bold text-brand-900">{DIMENSION_LABELS[key]}</p>
@@ -93,7 +102,7 @@ export function AnalysisCard({ analysis }: Props) {
                   {dim.interpretation}
                 </p>
               ) : null}
-              {dim.evidence.length > 0 ? (
+              {dim.evidence && dim.evidence.length > 0 ? (
                 <ul className="mt-2 space-y-0.5 text-[11px] text-[color:var(--color-ink-600)]">
                   {dim.evidence.map((e, i) => (
                     <li key={i} className="flex gap-1.5">
@@ -107,6 +116,7 @@ export function AnalysisCard({ analysis }: Props) {
           ))}
         </div>
       </div>
+      ) : null}
 
       {/* 강점 / 주의 */}
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">

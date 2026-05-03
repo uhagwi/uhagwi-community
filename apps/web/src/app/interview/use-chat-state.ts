@@ -7,7 +7,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { INTERVIEW_COMPLETE_TOKEN } from './system-prompt';
 
-const STORAGE_KEY = 'uhagwi.interview.chat.v0_2';
+// v0.4부터 storage key 변경 — 옛 v0.2/v0.3 캐시(dimensions·category 없음)와 호환 안 됨
+const STORAGE_KEY = 'uhagwi.interview.chat.v0_4';
 const FIRST_AI_MESSAGE =
   '안녕하세요! 30분 정도 편하게 대화하면서 당신 일을 알아볼게요.\n\n먼저 본인 소개부터 — 어떤 일 하시는 분이세요?';
 
@@ -77,9 +78,25 @@ const INITIAL_STATE: ChatState = {
 function loadState(): ChatState {
   if (typeof window === 'undefined') return INITIAL_STATE;
   try {
+    // v0.2/v0.3 옛 storage key 자동 정리 (호환 X)
+    window.localStorage.removeItem('uhagwi.interview.chat.v0_2');
+    window.localStorage.removeItem('uhagwi.interview.chat.v0_3');
+    window.localStorage.removeItem('uhagwi.interview.v0_1');
+
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return INITIAL_STATE;
-    return { ...INITIAL_STATE, ...JSON.parse(raw) };
+    const parsed = JSON.parse(raw) as Partial<ChatState>;
+
+    // 옛 schema 분석 결과(dimensions·category 없음) 감지 → 분석만 폐기, 대화는 유지
+    if (
+      parsed.analysis &&
+      (!parsed.analysis.dimensions ||
+        !parsed.analysis.auto_candidates?.[0]?.category)
+    ) {
+      return { ...INITIAL_STATE, ...parsed, analysis: null };
+    }
+
+    return { ...INITIAL_STATE, ...parsed };
   } catch {
     return INITIAL_STATE;
   }
