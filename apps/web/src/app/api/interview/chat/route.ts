@@ -1,8 +1,11 @@
 /**
- * POST /api/interview/chat — 인터뷰 챗봇 (Anthropic 스트리밍).
+ * POST /api/interview/chat — 인터뷰 챗봇 (Anthropic 비스트리밍).
+ *
+ * 비스트리밍 사용 사유: WSL/Vercel 환경에서 SSE 끊김 잦음.
+ * 한국어 짧은 응답(~200자)이라 사용자 체감 차이 작음 + 안정성 압도적.
  *
  * 입력: 메시지 히스토리 (user/assistant)
- * 출력: SSE 스트리밍 텍스트 (Anthropic Claude Haiku 4.5)
+ * 출력: { text, usage } JSON
  *
  * 종료 토큰 [INTERVIEW_COMPLETE] 가 응답에 포함되면 클라이언트가 종료 처리.
  */
@@ -34,7 +37,6 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  // Rate limit — IP 기반 (NextAuth 세션 추가 시 user.id로 교체)
   const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'anon';
   const rl = await checkRateLimit('write', ip);
   if (!rl.ok) {
@@ -61,53 +63,47 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  const client = new Anthropic({ apiKey });
-
-  const encoder = new TextEncoder();
-  const stream = new ReadableStream({
-    async start(controller) {
-      try {
-        const messageStream = await client.messages.stream({
-          model: 'claude-haiku-4-5-20251001',
-          max_tokens: 1024,
-          system: INTERVIEW_SYSTEM_PROMPT,
-          messages: parsed.data.messages.map((m) => ({
-            role: m.role,
-            content: m.content,
-          })),
-        });
-
-        for await (const event of messageStream) {
-          if (
-            event.type === 'content_block_delta' &&
-            event.delta.type === 'text_delta'
-          ) {
-            const chunk = event.delta.text;
-            controller.enqueue(encoder.encode(chunk));
-          }
-        }
-        controller.close();
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : 'unknown';
-        controller.enqueue(
-          encoder.encode(`\n\n[ERROR] ${msg}\n`),
-        );
-        controller.close();
-      }
-    },
+  const client = new Anthropic({
+    apiKey,
+    maxRetries: 2,
+    timeout: 50_000,
   });
 
-  return new Response(stream, {
-    headers: {
-      'Content-Type': 'text/plain; charset=utf-8',
-      'X-Accel-Buffering': 'no',
-      'Cache-Control': 'no-cache',
-    },
-  });
+  try {
+    const message = await client.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 1024,
+      system: INTERVIEW_SYSTEM_PROMPT,
+      messages: parsed.data.messages.map((m) => ({
+        role: m.role,
+        content: m.content,
+      })),
+    });
+
+    const text = message.content
+      .filter((b): b is Extract<typeof b, { type: 'text' }> => b.type === 'text')
+      .map((b) => b.text)
+      .join('\n')
+      .trim();
+
+    return Response.json({
+      text,
+      usage: {
+        input_tokens: message.usage.input_tokens,
+        output_tokens: message.usage.output_tokens,
+      },
+    });
+  } catch (err) {
+    const e = err as { status?: number; message?: string; name?: string; error?: { message?: string } };
+    const detail = `${e.name ?? 'Error'}: ${e.error?.message ?? e.message ?? 'unknown'}`;
+    const status = e.status ?? 500;
+    console.error('[interview/chat] Anthropic 호출 실패', { status, detail });
+    return problem('internal', {
+      detail: `Anthropic API 호출 실패 (status ${status}): ${detail}`,
+    });
+  }
 }
 
 export function GET() {
-  return internal(
-    'POST 만 지원 — JSON body { messages: [{role, content}, ...] } 보내주세요.',
-  );
+  return internal('POST 만 지원 — JSON body { messages: [{role, content}, ...] } 보내주세요.');
 }

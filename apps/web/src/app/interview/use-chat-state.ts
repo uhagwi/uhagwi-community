@@ -158,34 +158,29 @@ export function useChatState() {
           signal: controller.signal,
         });
 
-        if (!res.ok || !res.body) {
-          const txt = await res.text();
-          throw new Error(`HTTP ${res.status}: ${txt.slice(0, 300)}`);
+        if (!res.ok) {
+          let detail = `HTTP ${res.status}`;
+          try {
+            const errJson = await res.json();
+            detail = errJson.detail ?? detail;
+          } catch {
+            const txt = await res.text();
+            detail = txt.slice(0, 300) || detail;
+          }
+          throw new Error(detail);
         }
 
-        const reader = res.body.getReader();
-        const decoder = new TextDecoder();
-        let acc = '';
-
-        while (true) {
-          const { value, done } = await reader.read();
-          if (done) break;
-          acc += decoder.decode(value, { stream: true });
-          setState((s) => ({
-            ...s,
-            messages: s.messages.map((m) => (m.id === aiId ? { ...m, content: acc } : m)),
-          }));
-        }
+        const json = (await res.json()) as { text: string };
+        const acc = json.text;
 
         // 종료 토큰 감지
         const completed = acc.includes(INTERVIEW_COMPLETE_TOKEN);
         const cleaned = acc.replace(INTERVIEW_COMPLETE_TOKEN, '').trim();
 
+        // 응답 + 종료 처리 한 번에
         setState((s) => ({
           ...s,
-          messages: s.messages.map((m) =>
-            m.id === aiId ? { ...m, content: cleaned } : m,
-          ),
+          messages: s.messages.map((m) => (m.id === aiId ? { ...m, content: cleaned } : m)),
           done: completed ? true : s.done,
           finishedAt: completed ? new Date().toISOString() : s.finishedAt,
         }));
