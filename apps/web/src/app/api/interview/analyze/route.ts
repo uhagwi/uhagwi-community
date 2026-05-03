@@ -120,14 +120,33 @@ export async function POST(req: NextRequest) {
   }
 
   try {
+    // Opus는 messages가 user 메시지로 끝나야 함.
+    // 인터뷰 메시지 전체를 user 메시지 1개로 묶어 전달 (가장 안정적).
+    const conversationText = parsed.data.messages
+      .map((m) => `[${m.role === 'user' ? '사용자' : '도반'}] ${m.content}`)
+      .join('\n\n');
+
+    const userPrompt = `다음은 사용자와 우하귀 진단 도반의 대화 전체입니다.
+시스템 프롬프트의 출력 형식(순수 JSON)에 따라 페르소나를 분석해주세요.
+
+---
+
+${conversationText}
+
+---
+
+위 대화를 바탕으로 JSON으로만 응답해주세요. 마크다운 코드 펜스 금지.`;
+
     const result = await callAnthropic(apiKey, {
       model: 'claude-opus-4-7',
       max_tokens: 4096,
       system: INTERVIEW_ANALYZE_PROMPT,
-      messages: parsed.data.messages.map((m) => ({
-        role: m.role,
-        content: m.content,
-      })),
+      messages: [
+        {
+          role: 'user' as const,
+          content: userPrompt,
+        },
+      ],
     });
 
     const text = result.content
