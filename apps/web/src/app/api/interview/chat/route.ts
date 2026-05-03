@@ -1,15 +1,12 @@
 /**
- * POST /api/interview/chat — 인터뷰 챗봇 (Anthropic 비스트리밍).
+ * POST /api/interview/chat — 인터뷰 챗봇 (Anthropic Messages API 직접 fetch).
  *
- * 비스트리밍 사용 사유: WSL/Vercel 환경에서 SSE 끊김 잦음.
- * 한국어 짧은 응답(~200자)이라 사용자 체감 차이 작음 + 안정성 압도적.
+ * SDK 사용 안 함 — Vercel serverless 환경에서 SDK가 "Connection error" 자주 던짐.
+ * 직접 fetch가 의존성 0 + Vercel·로컬 동일 동작.
  *
  * 입력: 메시지 히스토리 (user/assistant)
  * 출력: { text, usage } JSON
- *
- * 종료 토큰 [INTERVIEW_COMPLETE] 가 응답에 포함되면 클라이언트가 종료 처리.
  */
-import Anthropic from '@anthropic-ai/sdk';
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { INTERVIEW_SYSTEM_PROMPT } from '@/app/interview/system-prompt';
@@ -27,6 +24,61 @@ const MessageSchema = z.object({
 const RequestSchema = z.object({
   messages: z.array(MessageSchema).min(1).max(80),
 });
+
+type AnthropicResponse = {
+  id: string;
+  type: 'message';
+  role: 'assistant';
+  content: Array<{ type: 'text'; text: string } | { type: string; [k: string]: unknown }>;
+  model: string;
+  stop_reason: string | null;
+  usage: { input_tokens: number; output_tokens: number };
+};
+
+type AnthropicError = {
+  type: 'error';
+  error: { type: string; message: string };
+};
+
+async function callAnthropic(
+  apiKey: string,
+  body: object,
+  retries = 2,
+): Promise<AnthropicResponse> {
+  let lastErr: Error | null = null;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify(body),
+        cache: 'no-store',
+      });
+
+      if (!res.ok) {
+        const errJson = (await res.json().catch(() => null)) as AnthropicError | null;
+        const msg = errJson?.error?.message ?? `HTTP ${res.status}`;
+        const e = new Error(`Anthropic API ${res.status}: ${msg}`);
+        // 4xx 는 재시도 의미 없음 — 즉시 throw
+        if (res.status >= 400 && res.status < 500) throw e;
+        lastErr = e;
+      } else {
+        return (await res.json()) as AnthropicResponse;
+      }
+    } catch (err) {
+      lastErr = err instanceof Error ? err : new Error(String(err));
+      // 마지막 시도면 즉시 throw
+      if (attempt === retries) throw lastErr;
+    }
+    // 짧은 backoff
+    await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
+  }
+  throw lastErr ?? new Error('알 수 없는 오류');
+}
 
 export async function POST(req: NextRequest) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -63,14 +115,8 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  const client = new Anthropic({
-    apiKey,
-    maxRetries: 2,
-    timeout: 50_000,
-  });
-
   try {
-    const message = await client.messages.create({
+    const result = await callAnthropic(apiKey, {
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 1024,
       system: INTERVIEW_SYSTEM_PROMPT,
@@ -80,8 +126,8 @@ export async function POST(req: NextRequest) {
       })),
     });
 
-    const text = message.content
-      .filter((b): b is Extract<typeof b, { type: 'text' }> => b.type === 'text')
+    const text = result.content
+      .filter((b): b is { type: 'text'; text: string } => b.type === 'text')
       .map((b) => b.text)
       .join('\n')
       .trim();
@@ -89,17 +135,15 @@ export async function POST(req: NextRequest) {
     return Response.json({
       text,
       usage: {
-        input_tokens: message.usage.input_tokens,
-        output_tokens: message.usage.output_tokens,
+        input_tokens: result.usage.input_tokens,
+        output_tokens: result.usage.output_tokens,
       },
     });
   } catch (err) {
-    const e = err as { status?: number; message?: string; name?: string; error?: { message?: string } };
-    const detail = `${e.name ?? 'Error'}: ${e.error?.message ?? e.message ?? 'unknown'}`;
-    const status = e.status ?? 500;
-    console.error('[interview/chat] Anthropic 호출 실패', { status, detail });
+    const msg = err instanceof Error ? err.message : 'unknown';
+    console.error('[interview/chat] Anthropic 호출 실패', msg);
     return problem('internal', {
-      detail: `Anthropic API 호출 실패 (status ${status}): ${detail}`,
+      detail: `Anthropic API 호출 실패: ${msg}`,
     });
   }
 }

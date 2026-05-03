@@ -1,12 +1,8 @@
 /**
- * POST /api/interview/analyze — 종합 분석 (Anthropic Opus 4.7).
+ * POST /api/interview/analyze — 종합 분석 (Anthropic Opus 4.7 직접 fetch).
  *
- * 입력: 인터뷰 메시지 히스토리
- * 출력: 페르소나 코드 + 요약 + 강점/약점 + 자동화 후보 톱5 + creature 타입 (JSON)
- *
- * Haiku 인터뷰가 [INTERVIEW_COMPLETE] 토큰을 내면 클라이언트가 본 라우트 호출.
+ * SDK 사용 안 함 — Vercel serverless 호환성 + 의존성 0.
  */
-import Anthropic from '@anthropic-ai/sdk';
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { INTERVIEW_ANALYZE_PROMPT } from '@/app/interview/system-prompt';
@@ -49,6 +45,45 @@ const AnalyzeResultSchema = z.object({
   creature_personality: z.string().min(2).max(120),
 });
 
+type AnthropicResponse = {
+  content: Array<{ type: 'text'; text: string } | { type: string; [k: string]: unknown }>;
+  usage: { input_tokens: number; output_tokens: number };
+};
+
+type AnthropicError = { type: 'error'; error: { type: string; message: string } };
+
+async function callAnthropic(apiKey: string, body: object, retries = 1): Promise<AnthropicResponse> {
+  let lastErr: Error | null = null;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify(body),
+        cache: 'no-store',
+      });
+      if (!res.ok) {
+        const errJson = (await res.json().catch(() => null)) as AnthropicError | null;
+        const msg = errJson?.error?.message ?? `HTTP ${res.status}`;
+        const e = new Error(`Anthropic API ${res.status}: ${msg}`);
+        if (res.status >= 400 && res.status < 500) throw e;
+        lastErr = e;
+      } else {
+        return (await res.json()) as AnthropicResponse;
+      }
+    } catch (err) {
+      lastErr = err instanceof Error ? err : new Error(String(err));
+      if (attempt === retries) throw lastErr;
+    }
+    await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
+  }
+  throw lastErr ?? new Error('알 수 없는 오류');
+}
+
 export async function POST(req: NextRequest) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
@@ -84,10 +119,8 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  const client = new Anthropic({ apiKey });
-
   try {
-    const message = await client.messages.create({
+    const result = await callAnthropic(apiKey, {
       model: 'claude-opus-4-7',
       max_tokens: 4096,
       system: INTERVIEW_ANALYZE_PROMPT,
@@ -97,13 +130,12 @@ export async function POST(req: NextRequest) {
       })),
     });
 
-    const text = message.content
-      .filter((block): block is Extract<typeof block, { type: 'text' }> => block.type === 'text')
+    const text = result.content
+      .filter((b): b is { type: 'text'; text: string } => b.type === 'text')
       .map((b) => b.text)
       .join('\n')
       .trim();
 
-    // 코드 펜스 제거 (모델이 무심코 넣을 경우 방어)
     const cleaned = text
       .replace(/^```(?:json)?\s*/i, '')
       .replace(/\s*```\s*$/, '')
@@ -133,12 +165,13 @@ export async function POST(req: NextRequest) {
       ok: true,
       result: validated.data,
       usage: {
-        input_tokens: message.usage.input_tokens,
-        output_tokens: message.usage.output_tokens,
+        input_tokens: result.usage.input_tokens,
+        output_tokens: result.usage.output_tokens,
       },
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'unknown';
-    return problem('internal', { detail: `Opus 호출 실패: ${msg}` });
+    console.error('[interview/analyze] Anthropic 호출 실패', msg);
+    return problem('internal', { detail: `Anthropic Opus 호출 실패: ${msg}` });
   }
 }
