@@ -40,10 +40,10 @@ export const GACHA_CATALOG: GachaHarness[] = [
   // ─── 사람 빌더 — 본인 33+개 시드 (10개) ──────────
   {
     id: 'h_jin_001',
-    title: '벤처기업협회 사무 자동화',
+    title: '협회·비영리 사무 자동화',
     domain: 'admin',
     description:
-      '협회 공문·메일·업무일지·회의록 5개 스킬. PMS 연동 가능. 벤처기업협회 전북지회에서 8개월 운영 검증.',
+      '공문·메일·업무일지·회의록 5개 스킬. 회원 관리 시스템(PMS) 연동 가능. 8개월 실 운영 검증.',
     builder_type: 'human',
     builder_name: '이진명',
     grade: 'S',
@@ -54,10 +54,10 @@ export const GACHA_CATALOG: GachaHarness[] = [
   },
   {
     id: 'h_jin_002',
-    title: '카페 일일 매출 정산기',
+    title: '카페·소상공인 매출 정산기',
     domain: 'cafe_business',
     description:
-      '토스플레이스 엑셀·카드/현금 분리 + 일별/주간/월간 자동 정산. 카페 가일 15.5개월 실데이터 검증.',
+      '토스플레이스 엑셀·카드/현금 분리 + 일별/주간/월간 자동 정산. 15개월 실데이터 검증.',
     builder_type: 'human',
     builder_name: '이진명',
     grade: 'A',
@@ -123,9 +123,9 @@ export const GACHA_CATALOG: GachaHarness[] = [
   },
   {
     id: 'h_jin_007',
-    title: '리더스 아카데미 운영 하네스',
+    title: '교육·아카데미 운영 하네스',
     domain: 'admin',
-    description: '교육 사업 매니징 — 모집·강의·행사·재무·홍보 7 스킬. 10기 운영 검증.',
+    description: '교육 사업 매니징 — 모집·강의·행사·재무·홍보 7 스킬. 10기 규모 운영 검증.',
     builder_type: 'human',
     builder_name: '이진명',
     grade: 'B',
@@ -164,9 +164,10 @@ export const GACHA_CATALOG: GachaHarness[] = [
   },
   {
     id: 'h_jin_010',
-    title: '스테이터스 점수화 — 메타인지',
+    title: '커리어 메타인지 점수화',
     domain: 'research',
-    description: '본인 활동 5차원 점수화 + HTML 대시보드 + 자기소개서 자동 생성.',
+    description:
+      '활동 5차원(역량·관계·산출물·메타·실행) 점수화 + HTML 대시보드 + 자기소개서 자동 생성.',
     builder_type: 'human',
     builder_name: '이진명',
     grade: 'A',

@@ -18,6 +18,7 @@ import {
   addToCollection,
   drawCards,
   filterCatalog,
+  loadCollection,
   type BuilderFilter,
   type GachaHarness,
 } from '@/lib/gacha/catalog-seed';
@@ -50,6 +51,7 @@ export default function GachaPage() {
   const [gradeFilter, setGradeFilter] = useState<Grade | 'all'>('all');
   const [drawn, setDrawn] = useState<GachaHarness[]>([]);
   const [flipped, setFlipped] = useState<Set<string>>(new Set());
+  const [collected, setCollected] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -59,6 +61,7 @@ export default function GachaPage() {
     } catch {
       /* 무시 */
     }
+    setCollected(new Set(loadCollection()));
     setHydrated(true);
   }, []);
 
@@ -100,7 +103,7 @@ export default function GachaPage() {
       last_free_draw_date: today,
       total_drawn: s.total_drawn + 1,
     }));
-    addToCollection(cards.map((c) => c.id));
+    // 정책 v2: 뽑기 = 게이트, 컬렉션 등록 = 사용자 선택 (자동 추가 X)
   }
 
   function drawN(n: number) {
@@ -113,7 +116,23 @@ export default function GachaPage() {
       last_free_draw_date: today,
       total_drawn: s.total_drawn + cards.length,
     }));
-    addToCollection(cards.map((c) => c.id));
+    // 정책 v2: 자동 등록 X — 사용자가 카드별 "내 컬렉션에 등록" 클릭
+  }
+
+  function collectOne(id: string) {
+    if (collected.has(id)) return;
+    addToCollection([id]);
+    setCollected((s) => new Set(s).add(id));
+  }
+
+  function collectAll() {
+    const ids = drawn.map((c) => c.id);
+    addToCollection(ids);
+    setCollected((s) => {
+      const next = new Set(s);
+      ids.forEach((id) => next.add(id));
+      return next;
+    });
   }
 
   function drawPro() {
@@ -135,6 +154,7 @@ export default function GachaPage() {
     window.localStorage.removeItem('uhagwi.collection.v0_1');
     setDrawn([]);
     setFlipped(new Set());
+    setCollected(new Set());
     setState({ last_free_draw_date: null, total_drawn: 0 });
     window.localStorage.removeItem(STORAGE_KEY);
     alert('초기화 완료. 페이지가 새로고침됩니다.');
@@ -142,7 +162,9 @@ export default function GachaPage() {
   }
 
   function adminFillAll() {
-    addToCollection(GACHA_CATALOG.map((h) => h.id));
+    const ids = GACHA_CATALOG.map((h) => h.id);
+    addToCollection(ids);
+    setCollected(new Set(ids));
     alert('전체 18장 컬렉션에 채움. /gallery 가서 확인하세요.');
   }
 
@@ -232,42 +254,73 @@ export default function GachaPage() {
                 🎉 {drawn.length}장 뽑았어요! 카드를 탭해서 등급을 확인하세요
               </p>
               <div className="mx-auto grid max-w-[700px] grid-cols-2 gap-3 md:grid-cols-3 md:gap-4">
-                {drawn.map((h) => (
-                  <HarnessGradeCard
-                    key={h.id}
-                    title={h.title}
-                    domain={h.domain}
-                    description={h.description}
-                    grade={h.grade}
-                    score={{
-                      total: h.total,
-                      axes: h.axes,
-                      auto_score: h.total,
-                      user_score: null,
-                      user_review_count: 0,
-                      measured_at: h.verified_at,
-                    }}
-                    creature_emoji={h.creature_emoji}
-                    builder_type={h.builder_type}
-                    builder_name={h.builder_name}
-                    flipped={flipped.has(h.id)}
-                    onClick={() => flip(h.id)}
-                  />
-                ))}
+                {drawn.map((h) => {
+                  const isFlipped = flipped.has(h.id);
+                  const isCollected = collected.has(h.id);
+                  return (
+                    <div key={h.id} className="space-y-2">
+                      <HarnessGradeCard
+                        title={h.title}
+                        domain={h.domain}
+                        description={h.description}
+                        grade={h.grade}
+                        score={{
+                          total: h.total,
+                          axes: h.axes,
+                          auto_score: h.total,
+                          user_score: null,
+                          user_review_count: 0,
+                          measured_at: h.verified_at,
+                        }}
+                        creature_emoji={h.creature_emoji}
+                        builder_type={h.builder_type}
+                        builder_name={h.builder_name}
+                        flipped={isFlipped}
+                        onClick={() => flip(h.id)}
+                      />
+                      {isFlipped ? (
+                        <button
+                          type="button"
+                          onClick={() => collectOne(h.id)}
+                          disabled={isCollected}
+                          className={`w-full rounded-card border px-2 py-1.5 text-[11px] font-bold transition disabled:cursor-default ${
+                            isCollected
+                              ? 'border-emerald-300 bg-emerald-50 text-emerald-800'
+                              : 'border-brand-400 bg-white text-brand-800 hover:bg-brand-50'
+                          }`}
+                        >
+                          {isCollected ? '✅ 컬렉션에 있음' : '📦 내 컬렉션에 등록'}
+                        </button>
+                      ) : null}
+                    </div>
+                  );
+                })}
               </div>
 
               {flipped.size === drawn.length ? (
                 <div className="card text-center md:p-5">
-                  <p className="text-sm font-bold text-brand-900">마음에 드는 하네스를 골라보세요</p>
+                  <p className="text-sm font-bold text-brand-900">
+                    마음에 드는 카드를 내 컬렉션에 등록하세요
+                  </p>
                   <p className="mt-1 text-xs text-[color:var(--color-ink-600)]">
-                    실제 자동화 가동은 Pro 구독 ($9/월) — Claude Desktop·Cursor MCP 연동.
+                    <strong>등록은 무료·무제한</strong> · 뽑기 횟수와 분리.
+                    <br />
+                    실제 자동화 가동(MCP 연동)은 Pro 구독 ($9/월) — 별도.
                   </p>
                   <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-center">
-                    <button type="button" onClick={drawPro} className="btn-cta">
-                      Pro 구독하기
+                    <button
+                      type="button"
+                      onClick={collectAll}
+                      disabled={drawn.every((c) => collected.has(c.id))}
+                      className="btn-cta disabled:opacity-50"
+                    >
+                      📦 전부 등록 (무료)
+                    </button>
+                    <button type="button" onClick={drawPro} className="btn-ghost">
+                      Pro 구독 (자동화 가동)
                     </button>
                     <button type="button" onClick={reset} className="btn-ghost">
-                      다시 뽑기 (다른 필터)
+                      다시 뽑기
                     </button>
                   </div>
                 </div>
