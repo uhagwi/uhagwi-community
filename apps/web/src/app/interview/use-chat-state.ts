@@ -1,16 +1,22 @@
 'use client';
 
 /**
- * 인터뷰 챗봇 상태 hook — localStorage 영속 + 스트리밍.
+ * 인터뷰 v0.6 — 4 Phase 상태 머신.
+ *
+ * Phase 0: 시작 화면
+ * Phase 1: 사람 파악 인터뷰 (Haiku, 10~15턴)
+ * Phase 2: 업무 추천 결과 카드 (Opus 자동 호출)
+ * Phase 3: 자동화 욕구 인터뷰 (Haiku, 5~12턴)
+ * Phase 4: 자동화 후보 결과 카드 (Opus 자동 호출)
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { INTERVIEW_COMPLETE_TOKEN } from './system-prompt';
+import type { Phase2Result, Phase4Result } from './phases';
 
-// v0.4부터 storage key 변경 — 옛 v0.2/v0.3 캐시(dimensions·category 없음)와 호환 안 됨
-const STORAGE_KEY = 'uhagwi.interview.chat.v0_4';
-const FIRST_AI_MESSAGE =
-  '안녕하세요! 30분 정도 편하게 대화하면서 당신 일을 알아볼게요.\n\n먼저 본인 소개부터 — 어떤 일 하시는 분이세요?';
+const STORAGE_KEY = 'uhagwi.interview.v0_6';
+const PHASE1_FIRST_MSG =
+  '안녕하세요! 🌊 30분 정도 편하게 대화하면서 당신이 어떤 일을 하시는 분인지 알아볼게요.\n\n먼저 — 요즘 어떤 일 하시면서 지내세요?';
 
 export type ChatRole = 'user' | 'assistant';
 export type ChatMessage = {
@@ -20,127 +26,93 @@ export type ChatMessage = {
   createdAt: string;
 };
 
-export type AutoCandidate = {
-  rank: number;
-  category: 'daily' | 'weekly' | 'one_time' | 'social';
-  title: string;
-  domain: string;
-  why: string;
-  estimated_save_min_per_week: number;
-};
+export type V6Phase = 0 | 1 | 2 | 3 | 4;
 
-export type Dimension = {
-  score: number;
-  evidence: string[];
-  interpretation: string;
-};
-
-export type AnalyzeResult = {
-  persona_code: string;
-  persona_name_kr: string;
-  summary: string;
-  dimensions: {
-    domain_breadth: Dimension;
-    automation_drive: Dimension;
-    systems_thinking: Dimension;
-    exploration: Dimension;
-    externalization: Dimension;
-  };
-  strengths: string[];
-  watch_outs: string[];
-  auto_candidates: AutoCandidate[];
-  total_save_min_per_week: number;
-  recommended_first_demo: number;
-  creature_type: 'coder' | 'writer' | 'analyst' | 'designer' | 'researcher';
-  creature_personality: string;
-};
-
-export type ChatState = {
-  messages: ChatMessage[];
+export type V6State = {
+  phase: V6Phase;
   startedAt: string | null;
   finishedAt: string | null;
-  done: boolean;
-  analysis: AnalyzeResult | null;
-  analyzeError: string | null;
-  analyzing: boolean;
+
+  // Phase 1: 사람 파악 인터뷰
+  phase1Messages: ChatMessage[];
+  phase1Done: boolean;
+
+  // Phase 2: 업무 추천
+  phase2Result: Phase2Result | null;
+  phase2Error: string | null;
+  phase2Loading: boolean;
+
+  // Phase 3: 자동화 욕구 인터뷰
+  phase3Messages: ChatMessage[];
+  phase3Done: boolean;
+
+  // Phase 4: 자동화 후보
+  phase4Result: Phase4Result | null;
+  phase4Error: string | null;
+  phase4Loading: boolean;
 };
 
-const INITIAL_STATE: ChatState = {
-  messages: [],
+const INITIAL_STATE: V6State = {
+  phase: 0,
   startedAt: null,
   finishedAt: null,
-  done: false,
-  analysis: null,
-  analyzeError: null,
-  analyzing: false,
+  phase1Messages: [],
+  phase1Done: false,
+  phase2Result: null,
+  phase2Error: null,
+  phase2Loading: false,
+  phase3Messages: [],
+  phase3Done: false,
+  phase4Result: null,
+  phase4Error: null,
+  phase4Loading: false,
 };
-
-function loadState(): ChatState {
-  if (typeof window === 'undefined') return INITIAL_STATE;
-  try {
-    // v0.2/v0.3 옛 storage key 자동 정리 (호환 X)
-    window.localStorage.removeItem('uhagwi.interview.chat.v0_2');
-    window.localStorage.removeItem('uhagwi.interview.chat.v0_3');
-    window.localStorage.removeItem('uhagwi.interview.v0_1');
-
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return INITIAL_STATE;
-    const parsed = JSON.parse(raw) as Partial<ChatState>;
-
-    // 옛 schema 분석 결과(dimensions·category 없음) 감지 → 분석만 폐기, 대화는 유지
-    if (
-      parsed.analysis &&
-      (!parsed.analysis.dimensions ||
-        !parsed.analysis.auto_candidates?.[0]?.category)
-    ) {
-      return { ...INITIAL_STATE, ...parsed, analysis: null };
-    }
-
-    return { ...INITIAL_STATE, ...parsed };
-  } catch {
-    return INITIAL_STATE;
-  }
-}
-
-function saveState(state: ChatState) {
-  if (typeof window === 'undefined') return;
-  try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  } catch {
-    /* 용량 초과 등 무시 */
-  }
-}
 
 function genId(): string {
   return `m_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
-export function useChatState() {
-  const [state, setState] = useState<ChatState>(INITIAL_STATE);
+function loadState(): V6State {
+  if (typeof window === 'undefined') return INITIAL_STATE;
+  try {
+    // 옛 storage key 정리
+    [
+      'uhagwi.interview.chat.v0_2',
+      'uhagwi.interview.chat.v0_3',
+      'uhagwi.interview.chat.v0_4',
+      'uhagwi.interview.v0_1',
+    ].forEach((k) => window.localStorage.removeItem(k));
+
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    if (!raw) return INITIAL_STATE;
+    return { ...INITIAL_STATE, ...JSON.parse(raw) };
+  } catch {
+    return INITIAL_STATE;
+  }
+}
+
+function saveState(state: V6State) {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch {
+    /* 무시 */
+  }
+}
+
+function makeFirstMsg(content: string): ChatMessage {
+  return { id: genId(), role: 'assistant', content, createdAt: new Date().toISOString() };
+}
+
+export function useV6State() {
+  const [state, setState] = useState<V6State>(INITIAL_STATE);
   const [hydrated, setHydrated] = useState(false);
   const [streaming, setStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
-    const loaded = loadState();
-    if (loaded.messages.length === 0 && !loaded.startedAt) {
-      // 첫 진입 — AI 인사 자동 삽입
-      setState({
-        ...loaded,
-        startedAt: new Date().toISOString(),
-        messages: [
-          {
-            id: genId(),
-            role: 'assistant',
-            content: FIRST_AI_MESSAGE,
-            createdAt: new Date().toISOString(),
-          },
-        ],
-      });
-    } else {
-      setState(loaded);
-    }
+    setState(loadState());
     setHydrated(true);
   }, []);
 
@@ -148,24 +120,31 @@ export function useChatState() {
     if (hydrated) saveState(state);
   }, [state, hydrated]);
 
-  const sendUser = useCallback(
+  // ─── Phase 0 → 1: 인터뷰 시작 ─────────────────────────
+  const startInterview = useCallback(() => {
+    setState((s) => ({
+      ...s,
+      phase: 1,
+      startedAt: s.startedAt ?? new Date().toISOString(),
+      phase1Messages:
+        s.phase1Messages.length > 0 ? s.phase1Messages : [makeFirstMsg(PHASE1_FIRST_MSG)],
+    }));
+  }, []);
+
+  // ─── Phase 1: 사용자 메시지 전송 → Haiku 응답 ─────────
+  const sendPhase1Message = useCallback(
     async (text: string) => {
-      const trimmed = text.trim();
-      if (!trimmed || streaming || state.done) return;
+      if (!text.trim() || streaming || state.phase1Done) return;
       setError(null);
 
       const userMsg: ChatMessage = {
         id: genId(),
         role: 'user',
-        content: trimmed,
+        content: text.trim(),
         createdAt: new Date().toISOString(),
       };
+      const nextMessages = [...state.phase1Messages, userMsg];
 
-      // 메시지 추가 후 즉시 history 캡처
-      const nextMessages = [...state.messages, userMsg];
-      setState((s) => ({ ...s, messages: nextMessages }));
-
-      // AI 메시지 placeholder 추가 (스트리밍 채울 자리)
       const aiId = genId();
       const aiPlaceholder: ChatMessage = {
         id: aiId,
@@ -173,7 +152,7 @@ export function useChatState() {
         content: '',
         createdAt: new Date().toISOString(),
       };
-      setState((s) => ({ ...s, messages: [...nextMessages, aiPlaceholder] }));
+      setState((s) => ({ ...s, phase1Messages: [...nextMessages, aiPlaceholder] }));
       setStreaming(true);
 
       const controller = new AbortController();
@@ -185,10 +164,10 @@ export function useChatState() {
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify({
             messages: nextMessages.map((m) => ({ role: m.role, content: m.content })),
+            phase: 1,
           }),
           signal: controller.signal,
         });
-
         if (!res.ok) {
           let detail = `HTTP ${res.status}`;
           try {
@@ -200,139 +179,246 @@ export function useChatState() {
           }
           throw new Error(detail);
         }
-
         const json = (await res.json()) as { text: string };
         const acc = json.text;
-
-        // 종료 토큰 감지
         const completed = acc.includes(INTERVIEW_COMPLETE_TOKEN);
         const cleaned = acc.replace(INTERVIEW_COMPLETE_TOKEN, '').trim();
 
-        // 응답 + 종료 처리 한 번에
         setState((s) => ({
           ...s,
-          messages: s.messages.map((m) => (m.id === aiId ? { ...m, content: cleaned } : m)),
-          done: completed ? true : s.done,
-          finishedAt: completed ? new Date().toISOString() : s.finishedAt,
+          phase1Messages: s.phase1Messages.map((m) =>
+            m.id === aiId ? { ...m, content: cleaned } : m,
+          ),
+          phase1Done: completed ? true : s.phase1Done,
         }));
 
-        // 종료 시 Opus 분석 자동 호출
+        // 종료 시 Phase 2 자동 호출
         if (completed) {
-          setState((s) => ({ ...s, analyzing: true, analyzeError: null }));
-          try {
-            const finalMessages = [...nextMessages, { ...aiPlaceholder, content: cleaned }];
-            const ar = await fetch('/api/interview/analyze', {
-              method: 'POST',
-              headers: { 'content-type': 'application/json' },
-              body: JSON.stringify({
-                messages: finalMessages.map((m) => ({ role: m.role, content: m.content })),
-              }),
-            });
-            if (!ar.ok) {
-              const txt = await ar.text();
-              throw new Error(`HTTP ${ar.status}: ${txt.slice(0, 300)}`);
-            }
-            const json = (await ar.json()) as { ok: boolean; result: AnalyzeResult };
-            setState((s) => ({ ...s, analysis: json.result, analyzing: false }));
-          } catch (err) {
-            const msg = err instanceof Error ? err.message : '알 수 없는 오류';
-            setState((s) => ({ ...s, analyzeError: msg, analyzing: false }));
-          }
+          await runPhase2([...nextMessages, { ...aiPlaceholder, content: cleaned }]);
         }
       } catch (err) {
         const msg = err instanceof Error ? err.message : '알 수 없는 오류';
         setError(msg);
-        // placeholder 제거
-        setState((s) => ({ ...s, messages: s.messages.filter((m) => m.id !== aiId) }));
+        setState((s) => ({
+          ...s,
+          phase1Messages: s.phase1Messages.filter((m) => m.id !== aiId),
+        }));
       } finally {
         setStreaming(false);
         abortRef.current = null;
       }
     },
-    [state.messages, state.done, streaming],
+    [state.phase1Messages, state.phase1Done, streaming],
   );
 
-  const retryAnalyze = useCallback(async () => {
-    if (state.messages.length < 2) return;
-    setState((s) => ({ ...s, analyzing: true, analyzeError: null }));
+  // ─── Phase 2: 업무 추천 (Opus 자동) ───────────────────
+  const runPhase2 = useCallback(async (messages: ChatMessage[]) => {
+    setState((s) => ({ ...s, phase2Loading: true, phase2Error: null }));
     try {
-      const ar = await fetch('/api/interview/analyze', {
+      const res = await fetch('/api/interview/analyze', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
-          messages: state.messages.map((m) => ({ role: m.role, content: m.content })),
+          messages: messages.map((m) => ({ role: m.role, content: m.content })),
+          phase: 2,
         }),
       });
-      if (!ar.ok) {
-        let detail = `HTTP ${ar.status}`;
+      if (!res.ok) {
+        let detail = `HTTP ${res.status}`;
         try {
-          const errJson = await ar.json();
+          const errJson = await res.json();
           detail = errJson.detail ?? detail;
         } catch {
-          const txt = await ar.text();
+          const txt = await res.text();
           detail = txt.slice(0, 300) || detail;
         }
         throw new Error(detail);
       }
-      const json = (await ar.json()) as { ok: boolean; result: AnalyzeResult };
-      setState((s) => ({ ...s, analysis: json.result, analyzing: false }));
+      const json = (await res.json()) as { ok: boolean; result: Phase2Result };
+      setState((s) => ({
+        ...s,
+        phase2Result: json.result,
+        phase2Loading: false,
+        phase: 2,
+      }));
     } catch (err) {
       const msg = err instanceof Error ? err.message : '알 수 없는 오류';
-      setState((s) => ({ ...s, analyzeError: msg, analyzing: false }));
+      setState((s) => ({ ...s, phase2Error: msg, phase2Loading: false }));
     }
-  }, [state.messages]);
+  }, []);
 
+  const retryPhase2 = useCallback(() => {
+    if (state.phase1Messages.length < 2) return;
+    runPhase2(state.phase1Messages);
+  }, [state.phase1Messages, runPhase2]);
+
+  // ─── Phase 2 → 3: 자동화 욕구 인터뷰 시작 ────────────
+  const advanceToPhase3 = useCallback(() => {
+    if (!state.phase2Result) return;
+    const tasks = state.phase2Result.tasks.slice(0, 5);
+    const taskList = tasks
+      .map((t, i) => `${i + 1}. **${t.title}** (${t.domain}, ${t.frequency})`)
+      .join('\n');
+    const introMsg = `Phase 1 인터뷰를 보고 — 당신에게 자주 반복되는 일이 이런 것들이에요.\n\n${taskList}\n\n이 중에서 *내가 안 해도 되면 진짜 좋겠다* 싶은 일이 있으세요? (없으면 "없어요"도 OK)`;
+
+    setState((s) => ({
+      ...s,
+      phase: 3,
+      phase3Messages: [makeFirstMsg(introMsg)],
+    }));
+  }, [state.phase2Result]);
+
+  // ─── Phase 3: 사용자 메시지 전송 ──────────────────────
+  const sendPhase3Message = useCallback(
+    async (text: string) => {
+      if (!text.trim() || streaming || state.phase3Done) return;
+      setError(null);
+
+      const userMsg: ChatMessage = {
+        id: genId(),
+        role: 'user',
+        content: text.trim(),
+        createdAt: new Date().toISOString(),
+      };
+      const nextMessages = [...state.phase3Messages, userMsg];
+
+      const aiId = genId();
+      const aiPlaceholder: ChatMessage = {
+        id: aiId,
+        role: 'assistant',
+        content: '',
+        createdAt: new Date().toISOString(),
+      };
+      setState((s) => ({ ...s, phase3Messages: [...nextMessages, aiPlaceholder] }));
+      setStreaming(true);
+
+      const controller = new AbortController();
+      abortRef.current = controller;
+
+      try {
+        const phase2Context = state.phase2Result
+          ? JSON.stringify(state.phase2Result, null, 2)
+          : undefined;
+
+        const res = await fetch('/api/interview/chat', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            messages: nextMessages.map((m) => ({ role: m.role, content: m.content })),
+            phase: 3,
+            phase2_context: phase2Context,
+          }),
+          signal: controller.signal,
+        });
+        if (!res.ok) {
+          let detail = `HTTP ${res.status}`;
+          try {
+            const errJson = await res.json();
+            detail = errJson.detail ?? detail;
+          } catch {
+            const txt = await res.text();
+            detail = txt.slice(0, 300) || detail;
+          }
+          throw new Error(detail);
+        }
+        const json = (await res.json()) as { text: string };
+        const acc = json.text;
+        const completed = acc.includes(INTERVIEW_COMPLETE_TOKEN);
+        const cleaned = acc.replace(INTERVIEW_COMPLETE_TOKEN, '').trim();
+
+        setState((s) => ({
+          ...s,
+          phase3Messages: s.phase3Messages.map((m) =>
+            m.id === aiId ? { ...m, content: cleaned } : m,
+          ),
+          phase3Done: completed ? true : s.phase3Done,
+        }));
+
+        if (completed) {
+          await runPhase4([...nextMessages, { ...aiPlaceholder, content: cleaned }]);
+        }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : '알 수 없는 오류';
+        setError(msg);
+        setState((s) => ({
+          ...s,
+          phase3Messages: s.phase3Messages.filter((m) => m.id !== aiId),
+        }));
+      } finally {
+        setStreaming(false);
+        abortRef.current = null;
+      }
+    },
+    [state.phase3Messages, state.phase3Done, state.phase2Result, streaming],
+  );
+
+  // ─── Phase 4: 자동화 후보 도출 (Opus 자동) ────────────
+  const runPhase4 = useCallback(
+    async (phase3Messages: ChatMessage[]) => {
+      setState((s) => ({ ...s, phase4Loading: true, phase4Error: null }));
+      try {
+        const res = await fetch('/api/interview/analyze', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            // Phase 1 messages를 messages 필드에 보냄 (서버가 Phase 1 + 2 + 3 통합)
+            messages: state.phase1Messages.map((m) => ({ role: m.role, content: m.content })),
+            phase: 4,
+            phase2_result: state.phase2Result ? JSON.stringify(state.phase2Result) : undefined,
+            phase3_messages: phase3Messages.map((m) => ({ role: m.role, content: m.content })),
+          }),
+        });
+        if (!res.ok) {
+          let detail = `HTTP ${res.status}`;
+          try {
+            const errJson = await res.json();
+            detail = errJson.detail ?? detail;
+          } catch {
+            const txt = await res.text();
+            detail = txt.slice(0, 300) || detail;
+          }
+          throw new Error(detail);
+        }
+        const json = (await res.json()) as { ok: boolean; result: Phase4Result };
+        setState((s) => ({
+          ...s,
+          phase4Result: json.result,
+          phase4Loading: false,
+          phase: 4,
+          finishedAt: new Date().toISOString(),
+        }));
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : '알 수 없는 오류';
+        setState((s) => ({ ...s, phase4Error: msg, phase4Loading: false }));
+      }
+    },
+    [state.phase1Messages, state.phase2Result],
+  );
+
+  const retryPhase4 = useCallback(() => {
+    if (state.phase3Messages.length < 2) return;
+    runPhase4(state.phase3Messages);
+  }, [state.phase3Messages, runPhase4]);
+
+  // ─── 초기화 ──────────────────────────────────────
   const reset = useCallback(() => {
     abortRef.current?.abort();
     setState(INITIAL_STATE);
     setError(null);
     if (typeof window !== 'undefined') window.localStorage.removeItem(STORAGE_KEY);
-    // 첫 메시지 자동 재삽입
-    setTimeout(() => {
-      setState({
-        messages: [
-          {
-            id: genId(),
-            role: 'assistant',
-            content: FIRST_AI_MESSAGE,
-            createdAt: new Date().toISOString(),
-          },
-        ],
-        startedAt: new Date().toISOString(),
-        finishedAt: null,
-        done: false,
-        analysis: null,
-        analyzeError: null,
-        analyzing: false,
-      });
-    }, 50);
   }, []);
-
-  const exportJson = useCallback(() => {
-    return JSON.stringify(
-      {
-        version: 'v0.2-chat',
-        startedAt: state.startedAt,
-        finishedAt: state.finishedAt,
-        messages: state.messages.map((m) => ({
-          role: m.role,
-          content: m.content,
-          at: m.createdAt,
-        })),
-      },
-      null,
-      2,
-    );
-  }, [state]);
 
   return {
     hydrated,
     state,
     streaming,
     error,
-    sendUser,
+    startInterview,
+    sendPhase1Message,
+    retryPhase2,
+    advanceToPhase3,
+    sendPhase3Message,
+    retryPhase4,
     reset,
-    retryAnalyze,
-    exportJson,
   };
 }

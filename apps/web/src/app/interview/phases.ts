@@ -10,7 +10,55 @@
  * Phase 4 (자동화 후보 도출)   → Opus 분석 (실 자동화 후보 N개 + Pro 게이트)
  */
 
-export type Phase = 1 | 2 | 3 | 4;
+export type Phase = 0 | 1 | 2 | 3 | 4;
+
+// Phase 2 결과 타입
+export type Phase2Task = {
+  rank: number;
+  category: 'daily' | 'weekly' | 'monthly' | 'one_time' | 'social';
+  title: string;
+  domain: string;
+  frequency: string;
+  current_pain_level: 'low' | 'medium' | 'high';
+  why_relevant: string;
+  discovery_type: 'explicit' | 'inferred';
+};
+
+export type Phase2Result = {
+  user_profile_summary: string;
+  primary_domains: string[];
+  tasks: Phase2Task[];
+};
+
+// Phase 4 결과 타입
+export type Phase4Candidate = {
+  rank: number;
+  category: 'daily' | 'weekly' | 'one_time' | 'social';
+  title: string;
+  domain: string;
+  why_user_chose: string;
+  automation_approach: string;
+  estimated_save_min_per_week: number;
+  first_demo_priority: 'high' | 'medium' | 'low';
+};
+
+export type Phase4Result = {
+  persona_code: string;
+  persona_name_kr: string;
+  summary: string;
+  automation_priorities: {
+    must_have: string[];
+    want: string[];
+    off_limits: string[];
+  };
+  quality_bar: string;
+  auto_candidates: Phase4Candidate[];
+  total_save_min_per_week: number;
+  recommended_first_demo_rank: number;
+  creature_type: 'coder' | 'writer' | 'analyst' | 'designer' | 'researcher';
+  creature_personality: string;
+  pro_required_features: string[];
+};
 
 export const PHASE1_PROFILE_PROMPT = `당신은 우하귀(Uhagwi)의 1단계 진단 도반입니다 — *"사람 파악"* 만 하는 단계.
 
