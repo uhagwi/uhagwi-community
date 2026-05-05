@@ -290,6 +290,36 @@ export const CATALOG_SIZE = GACHA_CATALOG.length;
 
 export type BuilderFilter = 'all' | 'human' | 'ai';
 
+// ─── 마이 컬렉션 (뽑은 카드 누적, localStorage) ────
+const COLLECTION_KEY = 'uhagwi.collection.v0_1';
+
+export function loadCollection(): string[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = window.localStorage.getItem(COLLECTION_KEY);
+    if (!raw) return [];
+    return JSON.parse(raw) as string[];
+  } catch {
+    return [];
+  }
+}
+
+export function addToCollection(ids: string[]): string[] {
+  if (typeof window === 'undefined') return [];
+  const existing = loadCollection();
+  const merged = Array.from(new Set([...existing, ...ids]));
+  try {
+    window.localStorage.setItem(COLLECTION_KEY, JSON.stringify(merged));
+  } catch {
+    /* 무시 */
+  }
+  return merged;
+}
+
+export function getCatalogById(id: string): GachaHarness | undefined {
+  return GACHA_CATALOG.find((h) => h.id === id);
+}
+
 export function filterCatalog(
   filter: BuilderFilter,
   domain?: BenchmarkDomain,

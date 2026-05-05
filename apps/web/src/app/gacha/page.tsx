@@ -13,6 +13,7 @@ import { useEffect, useState } from 'react';
 import { HarnessGradeCard } from '@/components/HarnessGradeCard';
 import {
   CATALOG_SIZE,
+  addToCollection,
   drawCards,
   filterCatalog,
   type BuilderFilter,
@@ -86,6 +87,8 @@ export default function GachaPage() {
       last_free_draw_date: today,
       total_drawn: s.total_drawn + 1,
     }));
+    // 마이 컬렉션에 누적
+    addToCollection(cards.map((c) => c.id));
   }
 
   function drawPro() {
@@ -119,6 +122,9 @@ export default function GachaPage() {
           <div className="flex gap-2">
             <Link href="/" className="btn-ghost text-xs">
               홈
+            </Link>
+            <Link href="/gallery" className="btn-ghost text-xs">
+              🖼 갤러리
             </Link>
             <Link href="/interview" className="btn-ghost text-xs">
               맞춤 진단 →

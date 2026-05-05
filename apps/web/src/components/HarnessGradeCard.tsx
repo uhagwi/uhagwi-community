@@ -25,9 +25,21 @@ interface Props {
   builder_name?: string;
   /** 카드 뒤집힘 애니메이션 (가챠) */
   flipped?: boolean;
+  /** 미수집 카드 — 뒷면에 키워드 힌트(도메인·creature 이모지) 노출 */
+  lockedHint?: boolean;
   /** 클릭 핸들러 (사용·자세히 보기 등) */
   onClick?: () => void;
 }
+
+const DOMAIN_LABEL_MAP: Record<string, string> = {
+  education: '교육',
+  admin: '행정',
+  cafe_business: '자영업',
+  research: '연구',
+  design: '디자인',
+  engineering: '개발',
+  general: '일반',
+};
 
 export function HarnessGradeCard({
   title,
@@ -39,23 +51,53 @@ export function HarnessGradeCard({
   builder_type,
   builder_name,
   flipped = false,
+  lockedHint = false,
   onClick,
 }: Props) {
   const meta = GRADE_META[grade];
 
   if (!flipped) {
-    // 뒷면 — 가챠 미공개 상태
+    // 뒷면 — 가챠 미공개 또는 갤러리 미수집 (키워드 힌트)
+    const domainLabel = DOMAIN_LABEL_MAP[domain] ?? domain;
     return (
       <button
         type="button"
         onClick={onClick}
-        className="aspect-[3/4] w-full rounded-card border-2 border-brand-200 bg-gradient-to-br from-cream-100 to-brand-50 transition hover:scale-[1.02] hover:shadow-float"
-        aria-label="카드 뒤집기"
+        className="relative aspect-[3/4] w-full overflow-hidden rounded-card border-2 border-brand-200 bg-gradient-to-br from-cream-100 to-brand-50 transition hover:scale-[1.02] hover:shadow-float"
+        aria-label={lockedHint ? `미수집 카드 — ${domainLabel}` : '카드 뒤집기'}
       >
-        <div className="flex h-full flex-col items-center justify-center gap-2">
-          <p className="text-5xl">🎴</p>
-          <p className="text-xs font-bold text-brand-600">우하귀 카드</p>
-          <p className="text-[10px] text-[color:var(--color-ink-600)]">탭하여 뒤집기</p>
+        {/* 점선 패턴 배경 (미공개 분위기) */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 opacity-30"
+          style={{
+            backgroundImage:
+              'radial-gradient(circle, rgba(155, 130, 200, 0.3) 1px, transparent 1px)',
+            backgroundSize: '12px 12px',
+          }}
+        />
+        <div className="relative flex h-full flex-col items-center justify-center gap-2 p-3">
+          {lockedHint ? (
+            <>
+              {/* 도메인 칩 (살짝 노출) */}
+              <span className="rounded-pill bg-white/80 px-2 py-0.5 text-[10px] font-bold text-brand-700 shadow">
+                {domainLabel}
+              </span>
+              {/* creature 이모지 — 흐릿하게 */}
+              <p className="text-5xl opacity-60 grayscale">{creature_emoji}</p>
+              {/* 등급 자리 (가려짐) */}
+              <p className="font-display text-2xl font-bold text-brand-300">??</p>
+              <p className="text-[10px] text-[color:var(--color-ink-600)]">
+                🔒 미수집 — 가챠로 뽑기
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="text-5xl">🎴</p>
+              <p className="text-xs font-bold text-brand-600">우하귀 카드</p>
+              <p className="text-[10px] text-[color:var(--color-ink-600)]">탭하여 뒤집기</p>
+            </>
+          )}
         </div>
       </button>
     );

@@ -67,6 +67,14 @@ export default function LandingPage() {
                 30분 맞춤 진단 →
               </Link>
             </div>
+            <div className="mt-3 flex flex-col items-center gap-2 sm:flex-row md:justify-start">
+              <Link
+                href="/gallery"
+                className="text-xs text-brand-700 underline hover:text-brand-900"
+              >
+                🖼 전체 카탈로그 둘러보기 →
+              </Link>
+            </div>
           </div>
 
           {/* 우: 우하귀 로고 캐러셀 (11종 시안 10초마다 전환) */}
