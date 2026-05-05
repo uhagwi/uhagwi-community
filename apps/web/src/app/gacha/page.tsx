@@ -9,16 +9,19 @@
  */
 
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { HarnessGradeCard } from '@/components/HarnessGradeCard';
 import {
   CATALOG_SIZE,
+  GACHA_CATALOG,
   addToCollection,
   drawCards,
   filterCatalog,
   type BuilderFilter,
   type GachaHarness,
 } from '@/lib/gacha/catalog-seed';
+import type { Grade } from '@/lib/grades';
 
 const STORAGE_KEY = 'uhagwi.gacha.v0_1';
 const FREE_DAILY_LIMIT = 1; // 무료 매일 1장
@@ -38,9 +41,13 @@ function todayISO(): string {
 }
 
 export default function GachaPage() {
+  const searchParams = useSearchParams();
+  const isAdmin = searchParams.get('admin') === '1';
+
   const [state, setState] = useState<GachaState>(INITIAL);
   const [hydrated, setHydrated] = useState(false);
   const [filter, setFilter] = useState<BuilderFilter>('all');
+  const [gradeFilter, setGradeFilter] = useState<Grade | 'all'>('all');
   const [drawn, setDrawn] = useState<GachaHarness[]>([]);
   const [flipped, setFlipped] = useState<Set<string>>(new Set());
 
@@ -76,9 +83,15 @@ export default function GachaPage() {
   const usedFreeToday = state.last_free_draw_date === today;
   const remainingFree = usedFreeToday ? 0 : FREE_DAILY_LIMIT;
 
+  function getPool(): GachaHarness[] {
+    let pool = filterCatalog(filter);
+    if (gradeFilter !== 'all') pool = pool.filter((h) => h.grade === gradeFilter);
+    return pool;
+  }
+
   function drawFree() {
-    if (usedFreeToday) return;
-    const pool = filterCatalog(filter);
+    if (!isAdmin && usedFreeToday) return;
+    const pool = getPool();
     if (pool.length === 0) return;
     const cards = drawCards(pool, 1);
     setDrawn(cards);
@@ -87,16 +100,55 @@ export default function GachaPage() {
       last_free_draw_date: today,
       total_drawn: s.total_drawn + 1,
     }));
-    // 마이 컬렉션에 누적
+    addToCollection(cards.map((c) => c.id));
+  }
+
+  function drawN(n: number) {
+    const pool = getPool();
+    if (pool.length === 0) return;
+    const cards = drawCards(pool, Math.min(n, pool.length));
+    setDrawn(cards);
+    setFlipped(new Set());
+    setState((s) => ({
+      last_free_draw_date: today,
+      total_drawn: s.total_drawn + cards.length,
+    }));
     addToCollection(cards.map((c) => c.id));
   }
 
   function drawPro() {
+    if (isAdmin) {
+      drawN(PRO_DRAW_COUNT);
+      return;
+    }
     alert(
       'Pro 구독 시 매번 ' +
         PRO_DRAW_COUNT +
         '장 뽑기 + 무제한 호출량 + Premium S 풀 ($9/월)\n\n다음 세션 결제 연동 예정.',
     );
+  }
+
+  // 관리자 액션
+  function adminResetCollection() {
+    if (typeof window === 'undefined') return;
+    if (!confirm('내 컬렉션을 모두 초기화하시겠어요?')) return;
+    window.localStorage.removeItem('uhagwi.collection.v0_1');
+    setDrawn([]);
+    setFlipped(new Set());
+    setState({ last_free_draw_date: null, total_drawn: 0 });
+    window.localStorage.removeItem(STORAGE_KEY);
+    alert('초기화 완료. 페이지가 새로고침됩니다.');
+    window.location.reload();
+  }
+
+  function adminFillAll() {
+    addToCollection(GACHA_CATALOG.map((h) => h.id));
+    alert('전체 18장 컬렉션에 채움. /gallery 가서 확인하세요.');
+  }
+
+  function adminShowAll() {
+    setDrawn([...GACHA_CATALOG]);
+    setFlipped(new Set(GACHA_CATALOG.map((h) => h.id)));
   }
 
   function flip(id: string) {
@@ -111,10 +163,21 @@ export default function GachaPage() {
   return (
     <div className="-mx-4 -my-8 flex min-h-[calc(100vh-4rem)] flex-col md:-mx-6 md:-my-12">
       {/* 헤더 */}
-      <header className="border-b border-brand-100 bg-cream-50 px-4 py-3 md:px-6">
+      <header
+        className={`border-b px-4 py-3 md:px-6 ${
+          isAdmin ? 'border-orange-300 bg-orange-50' : 'border-brand-100 bg-cream-50'
+        }`}
+      >
         <div className="mx-auto flex max-w-[1100px] items-center justify-between">
           <div>
-            <p className="text-sm font-bold text-brand-900">🎴 우하귀 가챠</p>
+            <p className="text-sm font-bold text-brand-900">
+              🎴 우하귀 가챠
+              {isAdmin ? (
+                <span className="ml-2 rounded-pill bg-orange-200 px-2 py-0.5 text-[10px] font-bold text-orange-900">
+                  🛠 관리자 모드
+                </span>
+              ) : null}
+            </p>
             <p className="text-xs text-[color:var(--color-ink-600)]">
               검증된 등급 하네스 {CATALOG_SIZE}장 풀 — 바로 쓸 수 있는 자동화
             </p>
@@ -136,6 +199,19 @@ export default function GachaPage() {
       {/* 본문 */}
       <main className="flex-1 overflow-y-auto px-4 py-6 md:px-6">
         <div className="mx-auto max-w-[1100px] space-y-5">
+          {/* 관리자 패널 */}
+          {isAdmin ? (
+            <AdminPanel
+              gradeFilter={gradeFilter}
+              setGradeFilter={setGradeFilter}
+              poolSize={getPool().length}
+              onDrawN={drawN}
+              onShowAll={adminShowAll}
+              onFillAll={adminFillAll}
+              onReset={adminResetCollection}
+            />
+          ) : null}
+
           {/* 안내 */}
           {drawn.length === 0 ? (
             <IntroPanel
@@ -145,6 +221,7 @@ export default function GachaPage() {
               totalDrawn={state.total_drawn}
               onDrawFree={drawFree}
               onDrawPro={drawPro}
+              isAdmin={isAdmin}
             />
           ) : null}
 
@@ -210,6 +287,7 @@ function IntroPanel({
   totalDrawn,
   onDrawFree,
   onDrawPro,
+  isAdmin,
 }: {
   filter: BuilderFilter;
   setFilter: (f: BuilderFilter) => void;
@@ -217,8 +295,10 @@ function IntroPanel({
   totalDrawn: number;
   onDrawFree: () => void;
   onDrawPro: () => void;
+  isAdmin: boolean;
 }) {
   const poolSize = filterCatalog(filter).length;
+  const canDrawFree = isAdmin || remainingFree > 0;
 
   return (
     <div className="space-y-4">
@@ -267,10 +347,16 @@ function IntroPanel({
             <button
               type="button"
               onClick={onDrawFree}
-              disabled={remainingFree === 0 || poolSize === 0}
+              disabled={!canDrawFree || poolSize === 0}
               className="btn-cta mt-3 w-full disabled:opacity-50"
             >
-              {remainingFree === 0 ? '내일 다시' : poolSize === 0 ? '풀 비어있음' : '🎴 무료 1장 뽑기'}
+              {!canDrawFree
+                ? '내일 다시'
+                : poolSize === 0
+                  ? '풀 비어있음'
+                  : isAdmin
+                    ? '🛠 관리자 1장 뽑기 (무제한)'
+                    : '🎴 무료 1장 뽑기'}
             </button>
           </div>
           <div className="rounded-card border-2 border-brand-500 bg-brand-50 p-4">
@@ -320,6 +406,120 @@ function FilterButton({
         active
           ? 'border-brand-500 bg-brand-500 text-white'
           : 'border-brand-200 bg-cream-50 text-brand-800 hover:bg-brand-50'
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
+const ADMIN_GRADES: Array<Grade | 'all'> = ['all', 'S', 'A', 'B', 'C', 'D'];
+
+function AdminPanel({
+  gradeFilter,
+  setGradeFilter,
+  poolSize,
+  onDrawN,
+  onShowAll,
+  onFillAll,
+  onReset,
+}: {
+  gradeFilter: Grade | 'all';
+  setGradeFilter: (g: Grade | 'all') => void;
+  poolSize: number;
+  onDrawN: (n: number) => void;
+  onShowAll: () => void;
+  onFillAll: () => void;
+  onReset: () => void;
+}) {
+  return (
+    <div className="rounded-card border-2 border-orange-300 bg-orange-50 p-4 md:p-5">
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-bold text-orange-900">🛠 관리자 패널</p>
+        <p className="text-[10px] text-orange-700">URL `?admin=1` — 본인 테스트 전용</p>
+      </div>
+
+      {/* 등급 필터 */}
+      <div className="mt-3">
+        <p className="text-[10px] font-bold uppercase tracking-wider text-orange-800">
+          등급 강제 ({poolSize}장 풀)
+        </p>
+        <div className="mt-1.5 flex flex-wrap gap-1.5">
+          {ADMIN_GRADES.map((g) => (
+            <button
+              key={g}
+              type="button"
+              onClick={() => setGradeFilter(g)}
+              className={`rounded-pill border px-2.5 py-1 text-[11px] font-bold transition ${
+                gradeFilter === g
+                  ? 'border-orange-600 bg-orange-600 text-white'
+                  : 'border-orange-300 bg-white text-orange-800 hover:bg-orange-100'
+              }`}
+            >
+              {g === 'all' ? '전체' : g}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* 뽑기 액션 */}
+      <div className="mt-3">
+        <p className="text-[10px] font-bold uppercase tracking-wider text-orange-800">
+          무제한 뽑기 (현재 풀)
+        </p>
+        <div className="mt-1.5 grid grid-cols-3 gap-1.5 sm:grid-cols-5">
+          <AdminBtn onClick={() => onDrawN(1)} disabled={poolSize === 0}>
+            +1
+          </AdminBtn>
+          <AdminBtn onClick={() => onDrawN(3)} disabled={poolSize === 0}>
+            +3
+          </AdminBtn>
+          <AdminBtn onClick={() => onDrawN(5)} disabled={poolSize === 0}>
+            +5
+          </AdminBtn>
+          <AdminBtn onClick={() => onDrawN(10)} disabled={poolSize === 0}>
+            +10
+          </AdminBtn>
+          <AdminBtn onClick={onShowAll}>전체 표시</AdminBtn>
+        </div>
+      </div>
+
+      {/* 컬렉션 액션 */}
+      <div className="mt-3">
+        <p className="text-[10px] font-bold uppercase tracking-wider text-orange-800">
+          컬렉션 조작 (localStorage)
+        </p>
+        <div className="mt-1.5 flex flex-wrap gap-1.5">
+          <AdminBtn onClick={onFillAll}>📦 전체 18장 채우기</AdminBtn>
+          <AdminBtn onClick={onReset} danger>
+            🗑 초기화 (게이트·컬렉션·총합)
+          </AdminBtn>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AdminBtn({
+  onClick,
+  disabled,
+  danger,
+  children,
+}: {
+  onClick: () => void;
+  disabled?: boolean;
+  danger?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={`rounded-card border px-2.5 py-1.5 text-[11px] font-bold transition disabled:opacity-50 ${
+        danger
+          ? 'border-red-300 bg-white text-red-800 hover:bg-red-50'
+          : 'border-orange-400 bg-white text-orange-900 hover:bg-orange-100'
       }`}
     >
       {children}
