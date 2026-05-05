@@ -10,7 +10,7 @@
  */
 import Link from 'next/link';
 import Image from 'next/image';
-import { auth } from '@/lib/auth';
+import { auth, signOut } from '@/lib/auth';
 
 const NAV_ITEMS = [
   { href: '/', label: '홈' },
@@ -19,6 +19,11 @@ const NAV_ITEMS = [
   { href: '/about', label: 'About' },
   { href: '/join', label: 'Discord' },
 ] as const;
+
+async function doSignOut() {
+  'use server';
+  await signOut({ redirectTo: '/' });
+}
 
 export async function SiteHeader() {
   const session = await auth();
@@ -65,12 +70,23 @@ export async function SiteHeader() {
         {/* 우: 인증 + 모바일 햄버거 */}
         <div className="flex items-center gap-2">
           {session ? (
-            <Link
-              href="/me"
-              className="hidden text-sm font-semibold text-brand-700 hover:text-brand-800 md:inline-flex"
-            >
-              내 하네스
-            </Link>
+            <div className="hidden items-center gap-3 md:flex">
+              <Link
+                href="/me"
+                className="text-sm font-semibold text-brand-700 hover:text-brand-800"
+              >
+                내 하네스
+              </Link>
+              <form action={doSignOut}>
+                <button
+                  type="submit"
+                  className="text-xs text-[color:var(--color-ink-600)] transition hover:text-brand-700"
+                  aria-label="로그아웃"
+                >
+                  로그아웃
+                </button>
+              </form>
+            </div>
           ) : (
             <Link
               href="/login"
@@ -114,12 +130,22 @@ export async function SiteHeader() {
               ))}
               <div className="mt-1 border-t border-[color:var(--color-ink-300)]/50 pt-1">
                 {session ? (
-                  <Link
-                    href="/me"
-                    className="block rounded-lg px-3 py-2 text-sm font-semibold text-brand-700 hover:bg-brand-50"
-                  >
-                    내 하네스
-                  </Link>
+                  <>
+                    <Link
+                      href="/me"
+                      className="block rounded-lg px-3 py-2 text-sm font-semibold text-brand-700 hover:bg-brand-50"
+                    >
+                      내 하네스
+                    </Link>
+                    <form action={doSignOut}>
+                      <button
+                        type="submit"
+                        className="block w-full rounded-lg px-3 py-2 text-left text-sm text-[color:var(--color-ink-600)] hover:bg-brand-50"
+                      >
+                        로그아웃
+                      </button>
+                    </form>
+                  </>
                 ) : (
                   <Link
                     href="/login"
