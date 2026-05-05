@@ -1,12 +1,13 @@
 /**
  * 인증된 사용자의 Supabase users.id 조회 — lazy upsert.
+ * Discord·Google 두 프로바이더 모두 지원.
  *
  * - jwt callback에서 DB 호출하지 않으므로, 실제 DB에 의존하는 API/Server Component 가
  *   필요할 때 이 함수로 users 행 보장.
  * - 캐시: 5분 TTL 인메모리 (서버리스 인스턴스 별로 독립)
  */
 import { auth } from '@/lib/auth';
-import { upsertUserFromDiscord } from '@/lib/db/users';
+import { upsertUserFromDiscord, upsertUserFromGoogle } from '@/lib/db/users';
 import type { DbUser } from '@/lib/db';
 
 const CACHE_TTL_MS = 5 * 60 * 1000;
@@ -18,23 +19,39 @@ const cache = new Map<string, { user: DbUser; expires: number }>();
  */
 export async function getCurrentUhagwiUser(): Promise<DbUser | null> {
   const session = await auth();
-  const u = session?.user as
-    | { discordId?: string; username?: string; globalName?: string; image?: string | null }
-    | undefined;
-  if (!u?.discordId) return null;
+  const u = session?.user;
+  if (!u) return null;
 
-  const hit = cache.get(u.discordId);
+  const cacheKey = u.discordId
+    ? `discord:${u.discordId}`
+    : u.googleId
+      ? `google:${u.googleId}`
+      : null;
+  if (!cacheKey) return null;
+
+  const hit = cache.get(cacheKey);
   if (hit && hit.expires > Date.now()) return hit.user;
 
   try {
-    const user = await upsertUserFromDiscord({
-      id: u.discordId,
-      username: u.username ?? null,
-      global_name: u.globalName ?? null,
-      // image URL → avatar hash 추출은 생략 (display_name·avatar_url 만 갱신)
-      avatar: extractAvatarHash(u.image ?? null, u.discordId),
-    });
-    cache.set(u.discordId, { user, expires: Date.now() + CACHE_TTL_MS });
+    let user: DbUser;
+    if (u.discordId) {
+      user = await upsertUserFromDiscord({
+        id: u.discordId,
+        username: u.username ?? null,
+        global_name: u.globalName ?? null,
+        avatar: extractAvatarHash(u.image ?? null, u.discordId),
+      });
+    } else if (u.googleId) {
+      user = await upsertUserFromGoogle({
+        sub: u.googleId,
+        name: u.globalName ?? u.name ?? null,
+        email: u.email ?? null,
+        picture: u.image ?? null,
+      });
+    } else {
+      return null;
+    }
+    cache.set(cacheKey, { user, expires: Date.now() + CACHE_TTL_MS });
     return user;
   } catch (err) {
     console.error('[auth-user] upsert 실패', err);
