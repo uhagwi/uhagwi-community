@@ -12,6 +12,7 @@ import { getDb } from '@/lib/db';
 import { getCurrentUserId } from '@/lib/auth-user';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { problem, unauthorized, badRequest, internal } from '@/lib/problem';
+import { scanIntimateContext } from '@/lib/intimate-context';
 
 const Schema = z.object({
   title: z.string().min(1).max(120),
@@ -92,6 +93,29 @@ export async function POST(req: NextRequest) {
     })));
   }
   const body = parsed.data;
+
+  // 친밀 맥락 검사 (정책 v2: 차단 X, 경고만 — 사용자 결정에 맡김)
+  const intimateHits = scanIntimateContext({
+    title: body.title,
+    one_liner: body.one_liner,
+    purpose: body.purpose,
+    prompt_snippet: body.prompt_snippet ?? undefined,
+    persona_name: body.persona_name ?? undefined,
+    persona_job: body.persona_job ?? undefined,
+  });
+  const url = new URL(req.url);
+  const ackIntimate = url.searchParams.get('ack_intimate') === '1';
+  if (intimateHits.length > 0 && !ackIntimate) {
+    return Response.json(
+      {
+        warning: 'intimate-context',
+        hits: intimateHits,
+        message:
+          '회사·기관·지역명 같은 친밀 맥락이 감지됐어요. 공개 게시 전에 카테고리 표현으로 바꾸는 걸 권장합니다. 그래도 게시하려면 ack_intimate=1 로 다시 요청하세요.',
+      },
+      { status: 409 },
+    );
+  }
 
   const db = getDb();
   const contentHash = `lab:${body.lab_meta.creatureId}`;

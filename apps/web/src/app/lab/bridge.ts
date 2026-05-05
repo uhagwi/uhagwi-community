@@ -109,15 +109,61 @@ export function harnessRowToCreature(row: UhagwiHarnessRow): Creature {
   return c;
 }
 
-// POST /api/lab/publish 클라이언트 래퍼 (서버 라우트는 후속 단계)
+// POST /api/lab/publish 클라이언트 래퍼.
+// 서버가 친밀 맥락(회사·지역·고유명)을 감지하면 409 반환 → 사용자에게 confirm() 후 ack=1 재시도.
+import { scanIntimateContext, summarizeHits } from '@/lib/intimate-context';
+
 export async function publishToUhagwi(c: Creature): Promise<{ slug: string } | { error: string }> {
   const draft = creatureToHarnessDraft(c);
+
+  // 1차 클라이언트 사전 점검 — 네트워크 왕복 전에 사용자에게 즉시 안내
+  const preHits = scanIntimateContext({
+    title: draft.title,
+    one_liner: draft.one_liner,
+    purpose: draft.purpose,
+    prompt_snippet: draft.prompt_snippet ?? undefined,
+    persona_name: draft.persona_name ?? undefined,
+    persona_job: draft.persona_job ?? undefined,
+  });
+  let ack = false;
+  if (preHits.length > 0) {
+    const ok = typeof window !== 'undefined'
+      ? window.confirm(`${summarizeHits(preHits)}\n\n그래도 그대로 게시할까요?`)
+      : false;
+    if (!ok) return { error: 'cancelled-by-user' };
+    ack = true;
+  }
+
   try {
-    const res = await fetch('/api/lab/publish', {
+    const url = ack ? '/api/lab/publish?ack_intimate=1' : '/api/lab/publish';
+    let res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(draft),
     });
+
+    // 서버가 추가 패턴을 잡아냈을 수도 있음 → 한 번 더 confirm 후 재시도
+    if (res.status === 409 && !ack) {
+      const data = (await res.json().catch(() => ({}))) as {
+        warning?: string;
+        message?: string;
+        hits?: ReturnType<typeof scanIntimateContext>;
+      };
+      if (data?.warning === 'intimate-context') {
+        const ok = typeof window !== 'undefined'
+          ? window.confirm(
+              `${summarizeHits(data.hits ?? [])}\n\n그래도 그대로 게시할까요?`,
+            )
+          : false;
+        if (!ok) return { error: 'cancelled-by-user' };
+        res = await fetch('/api/lab/publish?ack_intimate=1', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(draft),
+        });
+      }
+    }
+
     if (!res.ok) {
       const text = await res.text();
       return { error: text || `HTTP ${res.status}` };
