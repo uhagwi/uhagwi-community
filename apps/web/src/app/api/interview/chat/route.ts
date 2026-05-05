@@ -11,6 +11,10 @@ import { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { INTERVIEW_SYSTEM_PROMPT } from '@/app/interview/system-prompt';
 import { THEMES, buildThemeSystemPrompt, type ThemeId } from '@/app/interview/themes';
+import {
+  PHASE1_PROFILE_PROMPT,
+  PHASE3_AUTOMATION_DESIRE_PROMPT,
+} from '@/app/interview/phases';
 import { problem, internal } from '@/lib/problem';
 import { checkRateLimit } from '@/lib/rate-limit';
 
@@ -34,6 +38,10 @@ const RequestSchema = z.object({
       'direction_philosophy',
     ])
     .optional(),
+  // v0.6: 4 phase 분리 흐름. 1=사람파악, 3=자동화욕구. (2·4는 analyze API)
+  phase: z.union([z.literal(1), z.literal(3)]).optional(),
+  // Phase 3 진입 시 Phase 2 결과를 system 프롬프트 추가 컨텍스트로 받음
+  phase2_context: z.string().max(8000).optional(),
 });
 
 type AnthropicResponse = {
@@ -126,11 +134,20 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  // theme_id 있으면 테마별 짧은 인터뷰, 없으면 폴백(전체 인터뷰)
-  const theme = parsed.data.theme_id
-    ? THEMES.find((t) => t.id === parsed.data.theme_id)
-    : null;
-  const systemPrompt = theme ? buildThemeSystemPrompt(theme) : INTERVIEW_SYSTEM_PROMPT;
+  // 우선순위: phase > theme > 폴백
+  let systemPrompt: string;
+  if (parsed.data.phase === 1) {
+    systemPrompt = PHASE1_PROFILE_PROMPT;
+  } else if (parsed.data.phase === 3) {
+    systemPrompt = parsed.data.phase2_context
+      ? `${PHASE3_AUTOMATION_DESIRE_PROMPT}\n\n## Phase 2 결과 (사용자에게 보여줄 업무 후보)\n\n${parsed.data.phase2_context}`
+      : PHASE3_AUTOMATION_DESIRE_PROMPT;
+  } else if (parsed.data.theme_id) {
+    const theme = THEMES.find((t) => t.id === parsed.data.theme_id);
+    systemPrompt = theme ? buildThemeSystemPrompt(theme) : INTERVIEW_SYSTEM_PROMPT;
+  } else {
+    systemPrompt = INTERVIEW_SYSTEM_PROMPT;
+  }
 
   try {
     const result = await callAnthropic(apiKey, {

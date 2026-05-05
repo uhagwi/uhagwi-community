@@ -7,6 +7,10 @@ import { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { INTERVIEW_ANALYZE_PROMPT } from '@/app/interview/system-prompt';
 import { ANALYZE_THEME_PROMPT } from '@/app/interview/themes';
+import {
+  PHASE2_TASK_RECOMMEND_PROMPT,
+  PHASE4_AUTOMATION_DISTILL_PROMPT,
+} from '@/app/interview/phases';
 import { problem } from '@/lib/problem';
 import { checkRateLimit } from '@/lib/rate-limit';
 
@@ -30,6 +34,65 @@ const ThemeIdEnum = z.enum([
 const RequestSchema = z.object({
   messages: z.array(MessageSchema).min(2).max(80),
   theme_id: ThemeIdEnum.optional(),
+  // v0.6 4 phase: 2=업무추천, 4=자동화후보도출
+  phase: z.union([z.literal(2), z.literal(4)]).optional(),
+  // Phase 4는 Phase 2 결과·Phase 3 대화 누적이 필요
+  phase2_result: z.string().max(16000).optional(),
+  phase3_messages: z.array(MessageSchema).max(80).optional(),
+});
+
+// Phase 2: 업무 추천 스키마
+const Phase2ResultSchema = z.object({
+  user_profile_summary: z.string().min(20).max(1500),
+  primary_domains: z.array(z.string()).min(1).max(8),
+  tasks: z
+    .array(
+      z.object({
+        rank: z.number().int().min(1).max(15),
+        category: z.enum(['daily', 'weekly', 'monthly', 'one_time', 'social']),
+        title: z.string().min(2).max(80),
+        domain: z.string().min(2).max(40),
+        frequency: z.string().min(1).max(40),
+        current_pain_level: z.enum(['low', 'medium', 'high']),
+        why_relevant: z.string().min(10).max(400),
+        discovery_type: z.enum(['explicit', 'inferred']),
+      }),
+    )
+    .min(6)
+    .max(15),
+});
+
+// Phase 4: 자동화 후보 스키마
+const Phase4ResultSchema = z.object({
+  persona_code: z.string().min(2).max(40),
+  persona_name_kr: z.string().min(2).max(80),
+  summary: z.string().min(20).max(1500),
+  automation_priorities: z.object({
+    must_have: z.array(z.string()).min(0).max(5),
+    want: z.array(z.string()).min(0).max(5),
+    off_limits: z.array(z.string()).min(0).max(5),
+  }),
+  quality_bar: z.string().min(0).max(400),
+  auto_candidates: z
+    .array(
+      z.object({
+        rank: z.number().int().min(1).max(10),
+        category: z.enum(['daily', 'weekly', 'one_time', 'social']),
+        title: z.string().min(2).max(80),
+        domain: z.string().min(2).max(40),
+        why_user_chose: z.string().min(10).max(400),
+        automation_approach: z.string().min(10).max(400),
+        estimated_save_min_per_week: z.number().int().min(0).max(2000),
+        first_demo_priority: z.enum(['high', 'medium', 'low']),
+      }),
+    )
+    .min(4)
+    .max(10),
+  total_save_min_per_week: z.number().int().min(0).max(10000),
+  recommended_first_demo_rank: z.number().int().min(1).max(10),
+  creature_type: z.enum(['coder', 'writer', 'analyst', 'designer', 'researcher']),
+  creature_personality: z.string().min(2).max(120),
+  pro_required_features: z.array(z.string()).min(1).max(8),
 });
 
 const ThemeAnalyzeResultSchema = z.object({
@@ -167,20 +230,45 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  // theme_id 있으면 테마별 부분 분석 (가벼움), 없으면 종합 분석 (무거움)
+  // 모드 분기
+  const isPhase2 = parsed.data.phase === 2;
+  const isPhase4 = parsed.data.phase === 4;
   const isThemeAnalysis = !!parsed.data.theme_id;
-  const systemPrompt = isThemeAnalysis ? ANALYZE_THEME_PROMPT : INTERVIEW_ANALYZE_PROMPT;
-  // 테마 분석은 Haiku로 충분, 종합 분석만 Opus
-  const model = isThemeAnalysis ? 'claude-haiku-4-5-20251001' : 'claude-opus-4-7';
+
+  let systemPrompt: string;
+  let model: string;
+  if (isPhase2) {
+    systemPrompt = PHASE2_TASK_RECOMMEND_PROMPT;
+    model = 'claude-opus-4-7'; // 업무 추론은 Opus
+  } else if (isPhase4) {
+    systemPrompt = PHASE4_AUTOMATION_DISTILL_PROMPT;
+    model = 'claude-opus-4-7'; // 자동화 후보 도출도 Opus
+  } else if (isThemeAnalysis) {
+    systemPrompt = ANALYZE_THEME_PROMPT;
+    model = 'claude-haiku-4-5-20251001';
+  } else {
+    systemPrompt = INTERVIEW_ANALYZE_PROMPT;
+    model = 'claude-opus-4-7';
+  }
 
   try {
     const conversationText = parsed.data.messages
       .map((m) => `[${m.role === 'user' ? '사용자' : '도반'}] ${m.content}`)
       .join('\n\n');
 
-    const userPrompt = isThemeAnalysis
-      ? `테마: ${parsed.data.theme_id}\n\n다음 대화를 분석해 시스템 프롬프트의 JSON 형식으로만 응답해주세요.\n\n---\n\n${conversationText}\n\n---\n\nJSON만 반환. 마크다운 코드 펜스 금지.`
-      : `다음은 사용자와 우하귀 진단 도반의 대화 전체입니다.\n시스템 프롬프트의 출력 형식(순수 JSON)에 따라 페르소나를 분석해주세요.\n\n---\n\n${conversationText}\n\n---\n\n위 대화를 바탕으로 JSON으로만 응답해주세요. 마크다운 코드 펜스 금지.`;
+    let userPrompt: string;
+    if (isPhase2) {
+      userPrompt = `다음은 사용자와 도반의 Phase 1 (사람 파악) 대화입니다.\n시스템 프롬프트의 JSON 형식으로 이 사용자에게 필요한 업무 8~12개를 도출해주세요.\n\n---\n\n${conversationText}\n\n---\n\nJSON만 반환. 마크다운 코드 펜스 금지.`;
+    } else if (isPhase4) {
+      const phase3Text = (parsed.data.phase3_messages ?? [])
+        .map((m) => `[${m.role === 'user' ? '사용자' : '도반'}] ${m.content}`)
+        .join('\n\n');
+      userPrompt = `## Phase 1 인터뷰 (사람 파악)\n\n${conversationText}\n\n---\n\n## Phase 2 결과 (도출된 업무 후보)\n\n${parsed.data.phase2_result ?? '(없음)'}\n\n---\n\n## Phase 3 인터뷰 (자동화 욕구)\n\n${phase3Text || '(없음)'}\n\n---\n\n위 3 단계 데이터를 종합해 사용자가 *Phase 3에서 동의한* 업무를 자동화 후보 5~8개로 정제해주세요. JSON만 반환. 마크다운 코드 펜스 금지.`;
+    } else if (isThemeAnalysis) {
+      userPrompt = `테마: ${parsed.data.theme_id}\n\n다음 대화를 분석해 시스템 프롬프트의 JSON 형식으로만 응답해주세요.\n\n---\n\n${conversationText}\n\n---\n\nJSON만 반환. 마크다운 코드 펜스 금지.`;
+    } else {
+      userPrompt = `다음은 사용자와 우하귀 진단 도반의 대화 전체입니다.\n시스템 프롬프트의 출력 형식(순수 JSON)에 따라 페르소나를 분석해주세요.\n\n---\n\n${conversationText}\n\n---\n\n위 대화를 바탕으로 JSON으로만 응답해주세요. 마크다운 코드 펜스 금지.`;
+    }
 
     const result = await callAnthropic(apiKey, {
       model,
@@ -231,6 +319,46 @@ export async function POST(req: NextRequest) {
       // rank 재정렬 (1부터 순차)
       obj.auto_candidates.forEach((c, i) => {
         c.rank = i + 1;
+      });
+    }
+
+    // Phase 2: 업무 추천 스키마
+    if (isPhase2) {
+      const validated = Phase2ResultSchema.safeParse(parsedResult);
+      if (!validated.success) {
+        return problem('internal', {
+          detail: 'Phase 2 출력 스키마 검증 실패',
+          errors: validated.error.errors.map((e) => ({
+            field: e.path.join('.'),
+            message: e.message,
+          })),
+        });
+      }
+      return Response.json({
+        ok: true,
+        mode: 'phase2_tasks',
+        result: validated.data,
+        usage: result.usage,
+      });
+    }
+
+    // Phase 4: 자동화 후보 스키마
+    if (isPhase4) {
+      const validated = Phase4ResultSchema.safeParse(parsedResult);
+      if (!validated.success) {
+        return problem('internal', {
+          detail: 'Phase 4 출력 스키마 검증 실패',
+          errors: validated.error.errors.map((e) => ({
+            field: e.path.join('.'),
+            message: e.message,
+          })),
+        });
+      }
+      return Response.json({
+        ok: true,
+        mode: 'phase4_automation',
+        result: validated.data,
+        usage: result.usage,
       });
     }
 
