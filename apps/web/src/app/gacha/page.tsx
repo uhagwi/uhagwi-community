@@ -2,79 +2,24 @@
 
 /**
  * /gacha — 우하귀 가챠 페이지.
- * 사용자 정의: "기존에 적용을 바로 할 수 있는 하네스를 뽑는 곳" (인터뷰는 맞춤 제작).
- *
- * 1년차 시드: 사람 빌더(본인 33+개) + AI 빌더 하이브리드 18개.
- * 매일 1장 무료, 풀 N장 = Pro (placeholder).
+ * 정책 v2: 뽑기 = 결제 게이트, 컬렉션 등록 = 무료/사용자 선택.
+ * 관리자 모드: ?admin=1
  */
 
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import { HarnessGradeCard } from '@/components/HarnessGradeCard';
-import {
-  CATALOG_SIZE,
-  GACHA_CATALOG,
-  addToCollection,
-  drawCards,
-  filterCatalog,
-  loadCollection,
-  type BuilderFilter,
-  type GachaHarness,
-} from '@/lib/gacha/catalog-seed';
-import type { Grade } from '@/lib/grades';
-
-const STORAGE_KEY = 'uhagwi.gacha.v0_1';
-const FREE_DAILY_LIMIT = 1; // 무료 매일 1장
-const PRO_DRAW_COUNT = 5; // Pro 1회 5장
-
-type GachaState = {
-  /** 마지막 무료 뽑기 ISO 날짜 (YYYY-MM-DD) */
-  last_free_draw_date: string | null;
-  /** 누적 뽑은 카드 수 */
-  total_drawn: number;
-};
-
-const INITIAL: GachaState = { last_free_draw_date: null, total_drawn: 0 };
-
-function todayISO(): string {
-  return new Date().toISOString().slice(0, 10);
-}
+import { CATALOG_SIZE } from '@/lib/gacha/catalog-seed';
+import { AdminPanel } from './_components/AdminPanel';
+import { IntroPanel } from './_components/IntroPanel';
+import { DrawnGrid } from './_components/DrawnGrid';
+import { useGachaState } from './_components/use-gacha-state';
 
 export default function GachaPage() {
   const searchParams = useSearchParams();
   const isAdmin = searchParams.get('admin') === '1';
+  const g = useGachaState(isAdmin);
 
-  const [state, setState] = useState<GachaState>(INITIAL);
-  const [hydrated, setHydrated] = useState(false);
-  const [filter, setFilter] = useState<BuilderFilter>('all');
-  const [gradeFilter, setGradeFilter] = useState<Grade | 'all'>('all');
-  const [drawn, setDrawn] = useState<GachaHarness[]>([]);
-  const [flipped, setFlipped] = useState<Set<string>>(new Set());
-  const [collected, setCollected] = useState<Set<string>>(new Set());
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    try {
-      const raw = window.localStorage.getItem(STORAGE_KEY);
-      if (raw) setState({ ...INITIAL, ...(JSON.parse(raw) as Partial<GachaState>) });
-    } catch {
-      /* 무시 */
-    }
-    setCollected(new Set(loadCollection()));
-    setHydrated(true);
-  }, []);
-
-  useEffect(() => {
-    if (!hydrated) return;
-    try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    } catch {
-      /* 무시 */
-    }
-  }, [state, hydrated]);
-
-  if (!hydrated) {
+  if (!g.hydrated) {
     return (
       <div className="mx-auto max-w-[760px] py-16 text-center">
         <p className="text-sm text-[color:var(--color-ink-600)]">불러오는 중…</p>
@@ -82,109 +27,8 @@ export default function GachaPage() {
     );
   }
 
-  const today = todayISO();
-  const usedFreeToday = state.last_free_draw_date === today;
-  const remainingFree = usedFreeToday ? 0 : FREE_DAILY_LIMIT;
-
-  function getPool(): GachaHarness[] {
-    let pool = filterCatalog(filter);
-    if (gradeFilter !== 'all') pool = pool.filter((h) => h.grade === gradeFilter);
-    return pool;
-  }
-
-  function drawFree() {
-    if (!isAdmin && usedFreeToday) return;
-    const pool = getPool();
-    if (pool.length === 0) return;
-    const cards = drawCards(pool, 1);
-    setDrawn(cards);
-    setFlipped(new Set());
-    setState((s) => ({
-      last_free_draw_date: today,
-      total_drawn: s.total_drawn + 1,
-    }));
-    // 정책 v2: 뽑기 = 게이트, 컬렉션 등록 = 사용자 선택 (자동 추가 X)
-  }
-
-  function drawN(n: number) {
-    const pool = getPool();
-    if (pool.length === 0) return;
-    const cards = drawCards(pool, Math.min(n, pool.length));
-    setDrawn(cards);
-    setFlipped(new Set());
-    setState((s) => ({
-      last_free_draw_date: today,
-      total_drawn: s.total_drawn + cards.length,
-    }));
-    // 정책 v2: 자동 등록 X — 사용자가 카드별 "내 컬렉션에 등록" 클릭
-  }
-
-  function collectOne(id: string) {
-    if (collected.has(id)) return;
-    addToCollection([id]);
-    setCollected((s) => new Set(s).add(id));
-  }
-
-  function collectAll() {
-    const ids = drawn.map((c) => c.id);
-    addToCollection(ids);
-    setCollected((s) => {
-      const next = new Set(s);
-      ids.forEach((id) => next.add(id));
-      return next;
-    });
-  }
-
-  function drawPro() {
-    if (isAdmin) {
-      drawN(PRO_DRAW_COUNT);
-      return;
-    }
-    alert(
-      'Pro 구독 시 매번 ' +
-        PRO_DRAW_COUNT +
-        '장 뽑기 + 무제한 호출량 + Premium S 풀 ($9/월)\n\n다음 세션 결제 연동 예정.',
-    );
-  }
-
-  // 관리자 액션
-  function adminResetCollection() {
-    if (typeof window === 'undefined') return;
-    if (!confirm('내 컬렉션을 모두 초기화하시겠어요?')) return;
-    window.localStorage.removeItem('uhagwi.collection.v0_1');
-    setDrawn([]);
-    setFlipped(new Set());
-    setCollected(new Set());
-    setState({ last_free_draw_date: null, total_drawn: 0 });
-    window.localStorage.removeItem(STORAGE_KEY);
-    alert('초기화 완료. 페이지가 새로고침됩니다.');
-    window.location.reload();
-  }
-
-  function adminFillAll() {
-    const ids = GACHA_CATALOG.map((h) => h.id);
-    addToCollection(ids);
-    setCollected(new Set(ids));
-    alert('전체 18장 컬렉션에 채움. /gallery 가서 확인하세요.');
-  }
-
-  function adminShowAll() {
-    setDrawn([...GACHA_CATALOG]);
-    setFlipped(new Set(GACHA_CATALOG.map((h) => h.id)));
-  }
-
-  function flip(id: string) {
-    setFlipped((s) => new Set(s).add(id));
-  }
-
-  function reset() {
-    setDrawn([]);
-    setFlipped(new Set());
-  }
-
   return (
     <div className="-mx-4 -my-8 flex min-h-[calc(100vh-4rem)] flex-col md:-mx-6 md:-my-12">
-      {/* 헤더 */}
       <header
         className={`border-b px-4 py-3 md:px-6 ${
           isAdmin ? 'border-orange-300 bg-orange-50' : 'border-brand-100 bg-cream-50'
@@ -205,377 +49,51 @@ export default function GachaPage() {
             </p>
           </div>
           <div className="flex gap-2">
-            <Link href="/" className="btn-ghost text-xs">
-              홈
-            </Link>
-            <Link href="/gallery" className="btn-ghost text-xs">
-              🖼 갤러리
-            </Link>
-            <Link href="/interview" className="btn-ghost text-xs">
-              맞춤 진단 →
-            </Link>
+            <Link href="/" className="btn-ghost text-xs">홈</Link>
+            <Link href="/gallery" className="btn-ghost text-xs">🖼 갤러리</Link>
+            <Link href="/interview" className="btn-ghost text-xs">맞춤 진단 →</Link>
           </div>
         </div>
       </header>
 
-      {/* 본문 */}
       <main className="flex-1 overflow-y-auto px-4 py-6 md:px-6">
         <div className="mx-auto max-w-[1100px] space-y-5">
-          {/* 관리자 패널 */}
           {isAdmin ? (
             <AdminPanel
-              gradeFilter={gradeFilter}
-              setGradeFilter={setGradeFilter}
-              poolSize={getPool().length}
-              onDrawN={drawN}
-              onShowAll={adminShowAll}
-              onFillAll={adminFillAll}
-              onReset={adminResetCollection}
+              gradeFilter={g.gradeFilter}
+              setGradeFilter={g.setGradeFilter}
+              poolSize={g.poolSize}
+              onDrawN={g.drawN}
+              onShowAll={g.adminShowAll}
+              onFillAll={g.adminFillAll}
+              onReset={g.adminResetCollection}
             />
           ) : null}
 
-          {/* 안내 */}
-          {drawn.length === 0 ? (
+          {g.drawn.length === 0 ? (
             <IntroPanel
-              filter={filter}
-              setFilter={setFilter}
-              remainingFree={remainingFree}
-              totalDrawn={state.total_drawn}
-              onDrawFree={drawFree}
-              onDrawPro={drawPro}
+              filter={g.filter}
+              setFilter={g.setFilter}
+              remainingFree={g.remainingFree}
+              totalDrawn={g.state.total_drawn}
+              onDrawFree={g.drawFree}
+              onDrawPro={g.drawPro}
               isAdmin={isAdmin}
             />
-          ) : null}
-
-          {/* 뽑힌 카드 */}
-          {drawn.length > 0 ? (
-            <div className="space-y-4">
-              <p className="text-center text-sm font-bold text-brand-900">
-                🎉 {drawn.length}장 뽑았어요! 카드를 탭해서 등급을 확인하세요
-              </p>
-              <div className="mx-auto grid max-w-[700px] grid-cols-2 gap-3 md:grid-cols-3 md:gap-4">
-                {drawn.map((h) => {
-                  const isFlipped = flipped.has(h.id);
-                  const isCollected = collected.has(h.id);
-                  return (
-                    <div key={h.id} className="space-y-2">
-                      <HarnessGradeCard
-                        title={h.title}
-                        domain={h.domain}
-                        description={h.description}
-                        grade={h.grade}
-                        score={{
-                          total: h.total,
-                          axes: h.axes,
-                          auto_score: h.total,
-                          user_score: null,
-                          user_review_count: 0,
-                          measured_at: h.verified_at,
-                        }}
-                        creature_emoji={h.creature_emoji}
-                        builder_type={h.builder_type}
-                        builder_name={h.builder_name}
-                        flipped={isFlipped}
-                        onClick={() => flip(h.id)}
-                      />
-                      {isFlipped ? (
-                        <button
-                          type="button"
-                          onClick={() => collectOne(h.id)}
-                          disabled={isCollected}
-                          className={`w-full rounded-card border px-2 py-1.5 text-[11px] font-bold transition disabled:cursor-default ${
-                            isCollected
-                              ? 'border-emerald-300 bg-emerald-50 text-emerald-800'
-                              : 'border-brand-400 bg-white text-brand-800 hover:bg-brand-50'
-                          }`}
-                        >
-                          {isCollected ? '✅ 컬렉션에 있음' : '📦 내 컬렉션에 등록'}
-                        </button>
-                      ) : null}
-                    </div>
-                  );
-                })}
-              </div>
-
-              {flipped.size === drawn.length ? (
-                <div className="card text-center md:p-5">
-                  <p className="text-sm font-bold text-brand-900">
-                    마음에 드는 카드를 내 컬렉션에 등록하세요
-                  </p>
-                  <p className="mt-1 text-xs text-[color:var(--color-ink-600)]">
-                    <strong>등록은 무료·무제한</strong> · 뽑기 횟수와 분리.
-                    <br />
-                    실제 자동화 가동(MCP 연동)은 Pro 구독 ($9/월) — 별도.
-                  </p>
-                  <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-center">
-                    <button
-                      type="button"
-                      onClick={collectAll}
-                      disabled={drawn.every((c) => collected.has(c.id))}
-                      className="btn-cta disabled:opacity-50"
-                    >
-                      📦 전부 등록 (무료)
-                    </button>
-                    <button type="button" onClick={drawPro} className="btn-ghost">
-                      Pro 구독 (자동화 가동)
-                    </button>
-                    <button type="button" onClick={reset} className="btn-ghost">
-                      다시 뽑기
-                    </button>
-                  </div>
-                </div>
-              ) : null}
-            </div>
-          ) : null}
+          ) : (
+            <DrawnGrid
+              drawn={g.drawn}
+              flipped={g.flipped}
+              collected={g.collected}
+              onFlip={g.flip}
+              onCollectOne={g.collectOne}
+              onCollectAll={g.collectAll}
+              onDrawPro={g.drawPro}
+              onReset={g.reset}
+            />
+          )}
         </div>
       </main>
     </div>
-  );
-}
-
-function IntroPanel({
-  filter,
-  setFilter,
-  remainingFree,
-  totalDrawn,
-  onDrawFree,
-  onDrawPro,
-  isAdmin,
-}: {
-  filter: BuilderFilter;
-  setFilter: (f: BuilderFilter) => void;
-  remainingFree: number;
-  totalDrawn: number;
-  onDrawFree: () => void;
-  onDrawPro: () => void;
-  isAdmin: boolean;
-}) {
-  const poolSize = filterCatalog(filter).length;
-  const canDrawFree = isAdmin || remainingFree > 0;
-
-  return (
-    <div className="space-y-4">
-      <div className="card text-center md:p-6">
-        <p className="text-4xl">🎴</p>
-        <h1 className="mt-3 font-display text-2xl font-bold text-brand-900 md:text-3xl">
-          검증된 하네스 뽑기
-        </h1>
-        <p className="mt-2 text-sm leading-relaxed text-[color:var(--color-ink-600)] md:text-base">
-          벤치마크 통과한 등급 S/A/B/C/D 하네스 카탈로그.
-          <br />
-          오늘 풀 크기: <strong className="text-brand-700">{poolSize}장</strong> · 누적 뽑은 횟수:{' '}
-          <strong className="text-brand-700">{totalDrawn}회</strong>
-        </p>
-      </div>
-
-      {/* 필터 */}
-      <div className="card md:p-5">
-        <p className="text-xs font-bold uppercase tracking-wider text-brand-600">빌더 종류</p>
-        <div className="mt-2 flex gap-2">
-          <FilterButton active={filter === 'all'} onClick={() => setFilter('all')}>
-            전체
-          </FilterButton>
-          <FilterButton active={filter === 'human'} onClick={() => setFilter('human')}>
-            👤 사람 빌더
-          </FilterButton>
-          <FilterButton active={filter === 'ai'} onClick={() => setFilter('ai')}>
-            🤖 AI 빌더
-          </FilterButton>
-        </div>
-        <p className="mt-2 text-[11px] text-[color:var(--color-ink-600)]">
-          사람 빌더 = 도메인 깊이·실 운영 검증. AI 빌더 = 표준화·일관성·즉시 가동.
-        </p>
-      </div>
-
-      {/* 뽑기 버튼 */}
-      <div className="card md:p-5">
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-          <div className="rounded-card border border-brand-200 bg-cream-50 p-4">
-            <p className="text-sm font-bold text-brand-900">🎁 매일 무료 1장</p>
-            <p className="mt-1 text-xs text-[color:var(--color-ink-600)]">
-              오늘 남은 횟수: <strong>{remainingFree}/1</strong>
-              <br />
-              내일 다시 1장 뽑기 가능
-            </p>
-            <button
-              type="button"
-              onClick={onDrawFree}
-              disabled={!canDrawFree || poolSize === 0}
-              className="btn-cta mt-3 w-full disabled:opacity-50"
-            >
-              {!canDrawFree
-                ? '내일 다시'
-                : poolSize === 0
-                  ? '풀 비어있음'
-                  : isAdmin
-                    ? '🛠 관리자 1장 뽑기 (무제한)'
-                    : '🎴 무료 1장 뽑기'}
-            </button>
-          </div>
-          <div className="rounded-card border-2 border-brand-500 bg-brand-50 p-4">
-            <p className="text-sm font-bold text-brand-900">⭐ Pro 5장 뽑기</p>
-            <p className="mt-1 text-xs text-[color:var(--color-ink-600)]">
-              한 번에 5장 + Premium S 풀 + 무제한
-              <br />
-              $9/월 (다음 세션 결제 연동)
-            </p>
-            <button type="button" onClick={onDrawPro} className="btn-cta mt-3 w-full">
-              Pro 구독하기
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* 인터뷰 추천 */}
-      <div className="card md:p-5">
-        <p className="text-sm font-bold text-brand-900">💡 가챠 vs 인터뷰</p>
-        <p className="mt-1 text-xs text-[color:var(--color-ink-600)]">
-          <strong>가챠</strong> (지금 여기): 1~5분, 검증된 기성품 하네스 — 바로 사용
-          <br />
-          <strong>인터뷰</strong>: 30~40분, AI가 내 일을 분석해 *나만의 맞춤* 자동화 제작
-        </p>
-        <Link href="/interview" className="btn-ghost mt-3 inline-flex text-xs">
-          맞춤 진단도 받아보기 →
-        </Link>
-      </div>
-    </div>
-  );
-}
-
-function FilterButton({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`flex-1 rounded-card border px-3 py-2 text-xs font-medium transition ${
-        active
-          ? 'border-brand-500 bg-brand-500 text-white'
-          : 'border-brand-200 bg-cream-50 text-brand-800 hover:bg-brand-50'
-      }`}
-    >
-      {children}
-    </button>
-  );
-}
-
-const ADMIN_GRADES: Array<Grade | 'all'> = ['all', 'S', 'A', 'B', 'C', 'D'];
-
-function AdminPanel({
-  gradeFilter,
-  setGradeFilter,
-  poolSize,
-  onDrawN,
-  onShowAll,
-  onFillAll,
-  onReset,
-}: {
-  gradeFilter: Grade | 'all';
-  setGradeFilter: (g: Grade | 'all') => void;
-  poolSize: number;
-  onDrawN: (n: number) => void;
-  onShowAll: () => void;
-  onFillAll: () => void;
-  onReset: () => void;
-}) {
-  return (
-    <div className="rounded-card border-2 border-orange-300 bg-orange-50 p-4 md:p-5">
-      <div className="flex items-center justify-between">
-        <p className="text-sm font-bold text-orange-900">🛠 관리자 패널</p>
-        <p className="text-[10px] text-orange-700">URL `?admin=1` — 본인 테스트 전용</p>
-      </div>
-
-      {/* 등급 필터 */}
-      <div className="mt-3">
-        <p className="text-[10px] font-bold uppercase tracking-wider text-orange-800">
-          등급 강제 ({poolSize}장 풀)
-        </p>
-        <div className="mt-1.5 flex flex-wrap gap-1.5">
-          {ADMIN_GRADES.map((g) => (
-            <button
-              key={g}
-              type="button"
-              onClick={() => setGradeFilter(g)}
-              className={`rounded-pill border px-2.5 py-1 text-[11px] font-bold transition ${
-                gradeFilter === g
-                  ? 'border-orange-600 bg-orange-600 text-white'
-                  : 'border-orange-300 bg-white text-orange-800 hover:bg-orange-100'
-              }`}
-            >
-              {g === 'all' ? '전체' : g}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* 뽑기 액션 */}
-      <div className="mt-3">
-        <p className="text-[10px] font-bold uppercase tracking-wider text-orange-800">
-          무제한 뽑기 (현재 풀)
-        </p>
-        <div className="mt-1.5 grid grid-cols-3 gap-1.5 sm:grid-cols-5">
-          <AdminBtn onClick={() => onDrawN(1)} disabled={poolSize === 0}>
-            +1
-          </AdminBtn>
-          <AdminBtn onClick={() => onDrawN(3)} disabled={poolSize === 0}>
-            +3
-          </AdminBtn>
-          <AdminBtn onClick={() => onDrawN(5)} disabled={poolSize === 0}>
-            +5
-          </AdminBtn>
-          <AdminBtn onClick={() => onDrawN(10)} disabled={poolSize === 0}>
-            +10
-          </AdminBtn>
-          <AdminBtn onClick={onShowAll}>전체 표시</AdminBtn>
-        </div>
-      </div>
-
-      {/* 컬렉션 액션 */}
-      <div className="mt-3">
-        <p className="text-[10px] font-bold uppercase tracking-wider text-orange-800">
-          컬렉션 조작 (localStorage)
-        </p>
-        <div className="mt-1.5 flex flex-wrap gap-1.5">
-          <AdminBtn onClick={onFillAll}>📦 전체 18장 채우기</AdminBtn>
-          <AdminBtn onClick={onReset} danger>
-            🗑 초기화 (게이트·컬렉션·총합)
-          </AdminBtn>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function AdminBtn({
-  onClick,
-  disabled,
-  danger,
-  children,
-}: {
-  onClick: () => void;
-  disabled?: boolean;
-  danger?: boolean;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      className={`rounded-card border px-2.5 py-1.5 text-[11px] font-bold transition disabled:opacity-50 ${
-        danger
-          ? 'border-red-300 bg-white text-red-800 hover:bg-red-50'
-          : 'border-orange-400 bg-white text-orange-900 hover:bg-orange-100'
-      }`}
-    >
-      {children}
-    </button>
   );
 }

@@ -208,6 +208,7 @@ export function useV6State() {
         abortRef.current = null;
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [state.phase1Messages, state.phase1Done, streaming],
   );
 
@@ -349,6 +350,7 @@ export function useV6State() {
         abortRef.current = null;
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [state.phase3Messages, state.phase3Done, state.phase2Result, streaming],
   );
 

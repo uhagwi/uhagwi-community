@@ -1,15 +1,14 @@
 /**
- * 내 프로필 `/me` — 내 하네스 관리 (인증 필수)
+ * 내 프로필 `/me` — 본인 컬렉션 + 게시 (인증 필수)
  * 근거: docs/service-dev/02_design/ui.md §2-6
  *
- * 구성: 아바타·bio·통계 / 탭(공개 하네스 · 초안 · 받은 주접) / 하네스 카드 그리드
- * TODO: 구현 — ui.md §2-6 참조
- *   - API: GET /api/v1/me (본인 정보 + 통계)
- *   - 초안 이어쓰기 / 편집 / 공개범위 변경 / 삭제 액션
+ * 구성: 헤더(아바타·이름·통계) + 탭(컬렉션·게시물) + MyCollection 클라이언트 컴포넌트
+ * 후속: 게시물 탭은 Supabase posts 조회 연결, 받은 주접·통계 누적은 W2 단계.
  */
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { auth } from '@/lib/auth';
+import { MyCollection } from './_components/MyCollection';
 
 export const metadata = { title: '내 하네스' };
 
@@ -22,44 +21,34 @@ export default async function MePage() {
   return (
     <div className="space-y-8">
       <header className="card flex flex-col items-center gap-4 text-center md:flex-row md:text-left">
-        {/* TODO: 구현 — next/image 아바타 */}
-        <div
-          aria-hidden="true"
-          className="h-20 w-20 shrink-0 rounded-full bg-brand-200"
-        />
+        <div aria-hidden="true" className="h-20 w-20 shrink-0 rounded-full bg-brand-200" />
         <div className="flex-1 space-y-1">
-          <h1 className="text-xl font-bold text-brand-900">
-            {session.user?.name ?? '나'}
-          </h1>
+          <h1 className="text-xl font-bold text-brand-900">{session.user?.name ?? '나'}</h1>
           <p className="text-sm text-[color:var(--color-ink-600)]">
-            하네스 0 · 받은 주접 0 · 🔥 0
+            컬렉션은 localStorage 기반 — 게시·받은 주접 누적은 곧 합류
           </p>
         </div>
-        <Link href="/harnesses/new" className="btn-primary" aria-label="새 하네스 작성">
-          + 새로 만들기
-        </Link>
+        <div className="flex gap-2">
+          <Link href="/gacha" className="btn-ghost" aria-label="가챠 뽑으러 가기">
+            🎴 가챠
+          </Link>
+          <Link href="/harnesses/new" className="btn-primary" aria-label="새 하네스 작성">
+            + 새로 만들기
+          </Link>
+        </div>
       </header>
 
-      {/* 탭 */}
-      <nav aria-label="프로필 탭" className="flex gap-4 border-b border-[color:var(--color-ink-300)]">
-        <button type="button" className="border-b-2 border-brand-600 px-2 pb-3 font-semibold text-brand-800">
-          공개 하네스
-        </button>
-        <button type="button" className="px-2 pb-3 text-[color:var(--color-ink-600)]">
-          초안 (0)
-        </button>
-        <button type="button" className="px-2 pb-3 text-[color:var(--color-ink-600)]">
-          받은 주접
-        </button>
-      </nav>
+      <section aria-label="내 컬렉션" className="space-y-3">
+        <h2 className="text-lg font-bold text-brand-900">📦 내 컬렉션</h2>
+        <MyCollection />
+      </section>
 
-      <section
-        aria-label="내 하네스 목록"
-        className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4 lg:grid-cols-3"
-      >
-        {/* TODO: 구현 — API 응답 → HarnessCard + 편집/삭제 액션 */}
-        <div className="card col-span-full py-12 text-center text-[color:var(--color-ink-600)]">
-          아직 작성한 하네스가 없어요.
+      <section aria-label="내 게시물" className="space-y-3">
+        <h2 className="text-lg font-bold text-brand-900">📤 내가 게시한 하네스</h2>
+        <div className="card py-12 text-center text-sm text-[color:var(--color-ink-600)]">
+          게시물 조회는 곧 연결됩니다 (Supabase posts).
+          <br />
+          지금은 Lab에서 키운 creature를 게시하는 흐름만 가동 중입니다.
         </div>
       </section>
     </div>
