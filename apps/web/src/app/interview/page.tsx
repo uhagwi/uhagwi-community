@@ -26,9 +26,11 @@ export default function InterviewPage() {
     error,
     startInterview,
     sendPhase1Message,
+    completePhase1,
     retryPhase2,
     advanceToPhase3,
     sendPhase3Message,
+    completePhase3,
     retryPhase4,
     reset,
   } = useV6State();
@@ -145,21 +147,35 @@ export default function InterviewPage() {
 
       {/* 입력 영역 — Phase 1·3에서만 */}
       {state.phase === 1 && !state.phase1Done ? (
-        <ChatInput
-          onSend={sendPhase1Message}
-          disabled={streaming || state.phase2Loading}
-          totalMessages={state.phase1Messages.length}
-          placeholder={streaming ? '도반이 답하는 중…' : '편하게 답해주세요. 짧아도 충분해요.'}
-        />
+        <>
+          <CompleteBar
+            visible={state.phase1Messages.length >= 4}
+            label={`이 대화로 분석 받기 (지금까지 ${Math.ceil(state.phase1Messages.length / 2)}턴)`}
+            disabled={streaming || state.phase2Loading}
+            onComplete={completePhase1}
+          />
+          <ChatInput
+            onSend={sendPhase1Message}
+            disabled={streaming || state.phase2Loading}
+            totalMessages={state.phase1Messages.length}
+            placeholder={streaming ? '도반이 답하는 중…' : '편하게 답해주세요. 짧아도 충분해요.'}
+          />
+        </>
       ) : state.phase === 3 && !state.phase3Done ? (
-        <ChatInput
-          onSend={sendPhase3Message}
-          disabled={streaming || state.phase4Loading}
-          totalMessages={state.phase3Messages.length}
-          placeholder={
-            streaming ? '도반이 답하는 중…' : '편하게 답해주세요. "없어요"도 OK.'
-          }
-        />
+        <>
+          <CompleteBar
+            visible={state.phase3Messages.length >= 4}
+            label={`이 대화로 자동화 후보 받기 (지금까지 ${Math.ceil(state.phase3Messages.length / 2)}턴)`}
+            disabled={streaming || state.phase4Loading}
+            onComplete={completePhase3}
+          />
+          <ChatInput
+            onSend={sendPhase3Message}
+            disabled={streaming || state.phase4Loading}
+            totalMessages={state.phase3Messages.length}
+            placeholder={streaming ? '도반이 답하는 중…' : '편하게 답해주세요. "없어요"도 OK.'}
+          />
+        </>
       ) : state.phase === 4 && state.phase4Result ? (
         <footer className="border-t border-brand-100 bg-cream-50 px-4 py-4 md:px-6">
           <div className="mx-auto max-w-[760px]">
@@ -186,6 +202,37 @@ function phaseLabel(
   if (phase === 4)
     return p4Loading ? 'Phase 4/4 — 자동화 후보 도출 중…' : 'Phase 4/4 — 진단 완료 🎉';
   return '';
+}
+
+function CompleteBar({
+  visible,
+  label,
+  disabled,
+  onComplete,
+}: {
+  visible: boolean;
+  label: string;
+  disabled: boolean;
+  onComplete: () => void;
+}) {
+  if (!visible) return null;
+  return (
+    <div className="border-t border-brand-100 bg-yellow-50 px-3 py-2 md:px-4">
+      <div className="mx-auto flex max-w-[760px] items-center justify-between gap-2">
+        <p className="text-xs text-[color:var(--color-warning,#a87a00)]">
+          💡 충분히 들었으면 언제든 분석으로 넘어가세요
+        </p>
+        <button
+          type="button"
+          onClick={onComplete}
+          disabled={disabled}
+          className="btn-cta shrink-0 px-3 py-1.5 text-xs disabled:opacity-50"
+        >
+          {label} →
+        </button>
+      </div>
+    </div>
+  );
 }
 
 function PhaseProgress({ phase }: { phase: number }) {

@@ -400,6 +400,20 @@ export function useV6State() {
     runPhase4(state.phase3Messages);
   }, [state.phase3Messages, runPhase4]);
 
+  // ─── 수동 종료: Phase 1 끊고 분석으로 ────────────
+  const completePhase1 = useCallback(() => {
+    if (state.phase1Messages.length < 4) return; // 최소 2턴(사용자 응답 1회 이상) 필요
+    setState((s) => ({ ...s, phase1Done: true }));
+    runPhase2(state.phase1Messages);
+  }, [state.phase1Messages, runPhase2]);
+
+  // ─── 수동 종료: Phase 3 끊고 분석으로 ────────────
+  const completePhase3 = useCallback(() => {
+    if (state.phase3Messages.length < 4) return;
+    setState((s) => ({ ...s, phase3Done: true }));
+    runPhase4(state.phase3Messages);
+  }, [state.phase3Messages, runPhase4]);
+
   // ─── 초기화 ──────────────────────────────────────
   const reset = useCallback(() => {
     abortRef.current?.abort();
@@ -415,9 +429,11 @@ export function useV6State() {
     error,
     startInterview,
     sendPhase1Message,
+    completePhase1,
     retryPhase2,
     advanceToPhase3,
     sendPhase3Message,
+    completePhase3,
     retryPhase4,
     reset,
   };
