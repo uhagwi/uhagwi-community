@@ -53,18 +53,18 @@ export default function LandingPage() {
             </p>
             <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row md:justify-start">
               <Link
-                href="/interview"
+                href="/gacha"
                 className="btn-cta w-full sm:w-auto"
-                aria-label="무료 진단 시작"
+                aria-label="검증된 하네스 뽑기"
               >
-                30분 무료 진단 시작 →
+                🎴 바로 뽑기 (무료 1장)
               </Link>
               <Link
-                href="/harnesses"
+                href="/interview"
                 className="btn-ghost w-full sm:w-auto"
-                aria-label="하네스 갤러리 보기"
+                aria-label="맞춤 진단 시작"
               >
-                하네스 갤러리 보기
+                30분 맞춤 진단 →
               </Link>
             </div>
           </div>

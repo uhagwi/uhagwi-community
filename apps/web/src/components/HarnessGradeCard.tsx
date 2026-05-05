@@ -7,6 +7,8 @@
 
 import { GRADE_META, AXIS_LABELS, type Grade, type BenchmarkScore } from '@/lib/grades';
 
+export type BuilderType = 'human' | 'ai';
+
 interface Props {
   /** 하네스 메타 */
   title: string;
@@ -17,6 +19,10 @@ interface Props {
   score?: BenchmarkScore;
   /** creature 이모지 (다마고치 β와 결합) */
   creature_emoji?: string;
+  /** 빌더 종류 — 사람·AI */
+  builder_type?: BuilderType;
+  /** 빌더 이름 (사람: "이진명" / AI: "우하귀 AI") */
+  builder_name?: string;
   /** 카드 뒤집힘 애니메이션 (가챠) */
   flipped?: boolean;
   /** 클릭 핸들러 (사용·자세히 보기 등) */
@@ -30,6 +36,8 @@ export function HarnessGradeCard({
   grade,
   score,
   creature_emoji = '🌊',
+  builder_type,
+  builder_name,
   flipped = false,
   onClick,
 }: Props) {
@@ -67,6 +75,20 @@ export function HarnessGradeCard({
       >
         {meta.label}
       </div>
+
+      {/* 빌더 배지 (좌상단) */}
+      {builder_type ? (
+        <div
+          className={`absolute left-2 top-2 z-10 flex items-center gap-1 rounded-pill px-2 py-0.5 text-[10px] font-bold shadow ${
+            builder_type === 'human'
+              ? 'bg-orange-100 text-orange-800'
+              : 'bg-sky-100 text-sky-800'
+          }`}
+        >
+          <span>{builder_type === 'human' ? '👤' : '🤖'}</span>
+          <span>{builder_name ?? (builder_type === 'human' ? '사람' : 'AI')}</span>
+        </div>
+      ) : null}
 
       {/* S 등급 반짝 */}
       {meta.shimmer ? (
