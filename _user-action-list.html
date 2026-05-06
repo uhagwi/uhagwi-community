@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>우하귀 사용자 액션 리스트 — 2026-05-06</title>
+<style>
+  :root {
+    --brand: #2563eb;
+    --brand-50: #eff6ff;
+    --brand-100: #dbeafe;
+    --brand-200: #bfdbfe;
+    --brand-700: #1d4ed8;
+    --brand-900: #1e3a8a;
+    --ink-600: #475569;
+    --ink-800: #1e293b;
+    --ink-300: #cbd5e1;
+    --warn: #f59e0b;
+    --warn-bg: #fef3c7;
+    --crit: #dc2626;
+    --crit-bg: #fee2e2;
+    --ok: #059669;
+    --ok-bg: #d1fae5;
+    --bg: #fafaf7;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 32px 16px 64px;
+    font-family: -apple-system, BlinkMacSystemFont, "Pretendard", "Apple SD Gothic Neo", sans-serif;
+    background: var(--bg);
+    color: var(--ink-800);
+    line-height: 1.6;
+  }
+  .wrap { max-width: 920px; margin: 0 auto; }
+  header {
+    background: linear-gradient(135deg, var(--brand-50) 0%, #fef9c3 100%);
+    border: 1px solid var(--brand-200);
+    border-radius: 12px;
+    padding: 24px 28px;
+    margin-bottom: 28px;
+  }
+  header h1 { margin: 0 0 6px; font-size: 26px; color: var(--brand-900); }
+  header p { margin: 0; color: var(--ink-600); font-size: 14px; }
+  .meta {
+    display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px;
+  }
+  .meta-chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: rgba(255,255,255,0.7); border: 1px solid var(--brand-200);
+    border-radius: 999px; padding: 4px 10px; font-size: 12px; color: var(--brand-700);
+  }
+  section { margin-bottom: 28px; }
+  h2 {
+    font-size: 18px; margin: 0 0 14px;
+    padding: 8px 14px; border-radius: 8px;
+    color: white; display: inline-block;
+  }
+  h2.crit { background: var(--crit); }
+  h2.warn { background: var(--warn); color: #422; }
+  h2.ok { background: var(--ok); }
+  h2.info { background: var(--brand); }
+
+  .task {
+    background: white;
+    border: 1px solid var(--ink-300);
+    border-left: 4px solid var(--brand);
+    border-radius: 10px;
+    padding: 18px 20px;
+    margin-bottom: 12px;
+    transition: box-shadow 0.15s;
+  }
+  .task:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+  .task.crit { border-left-color: var(--crit); }
+  .task.warn { border-left-color: var(--warn); }
+  .task.ok { border-left-color: var(--ok); }
+
+  .task-head {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    margin-bottom: 8px;
+  }
+  .task-num {
+    background: var(--brand-100); color: var(--brand-700);
+    border-radius: 6px; padding: 2px 8px;
+    font-size: 12px; font-weight: 700;
+  }
+  .task.crit .task-num { background: var(--crit-bg); color: var(--crit); }
+  .task.warn .task-num { background: var(--warn-bg); color: #92400e; }
+  .task.ok .task-num { background: var(--ok-bg); color: var(--ok); }
+
+  .task-title {
+    font-size: 16px; font-weight: 700; color: var(--ink-800);
+    flex: 1; min-width: 200px;
+  }
+  .task-time {
+    font-size: 11px; color: var(--ink-600);
+    background: #f1f5f9; padding: 2px 8px; border-radius: 4px;
+  }
+  .task-why {
+    font-size: 13px; color: var(--ink-600);
+    margin-bottom: 12px; padding-bottom: 10px;
+    border-bottom: 1px dashed var(--ink-300);
+  }
+  .task ol { margin: 0; padding-left: 22px; font-size: 14px; }
+  .task ol li { margin-bottom: 6px; }
+  .task code, .task kbd {
+    background: #f1f5f9; padding: 2px 6px; border-radius: 4px;
+    font-family: "JetBrains Mono", "Cascadia Code", Consolas, monospace;
+    font-size: 12px; color: #be185d;
+  }
+  .task kbd {
+    border: 1px solid var(--ink-300);
+    box-shadow: 0 1px 0 var(--ink-300);
+    color: var(--ink-800); background: white;
+  }
+  .task a {
+    color: var(--brand); text-decoration: underline;
+    word-break: break-all;
+  }
+  .task .hint {
+    background: #fffbeb; border: 1px solid #fde68a;
+    padding: 8px 10px; border-radius: 6px; margin-top: 8px;
+    font-size: 12px; color: #78350f;
+  }
+  .checkbox {
+    display: inline-block; width: 14px; height: 14px;
+    border: 2px solid var(--ink-300); border-radius: 3px;
+    margin-right: 6px; vertical-align: -2px;
+  }
+  footer {
+    margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--ink-300);
+    font-size: 12px; color: var(--ink-600); text-align: center;
+  }
+  table {
+    width: 100%; border-collapse: collapse; font-size: 13px;
+    margin-top: 8px;
+  }
+  th, td { padding: 8px 10px; text-align: left; border: 1px solid var(--ink-300); }
+  th { background: var(--brand-50); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>🐙 우하귀 — 사용자가 직접 해야 할 액션</h1>
+  <p>코드는 모두 박혀 있습니다. 외부 서비스(Vercel·Discord·Supabase·도메인)에서 수동으로 클릭·입력해야 동작하는 항목만 정리.</p>
+  <div class="meta">
+    <span class="meta-chip">📅 2026-05-06 (v3 — 6시간 자동 개선 루프 완료)</span>
+    <span class="meta-chip">📦 cycle 6/6 완료</span>
+    <span class="meta-chip">🌐 https://uhagwi-community.vercel.app</span>
+    <span class="meta-chip">🐙 GitHub: uhagwi/uhagwi-community</span>
+  </div>
+</header>
+
+<!-- ──────────────────────────────────────────────────────── -->
+<section>
+<h2 class="crit">🔴 즉시 (서비스가 안 돌아감)</h2>
+
+<div class="task crit">
+  <div class="task-head">
+    <span class="task-num">U-1</span>
+    <span class="task-title">도메인 <code>uhagwi.com</code> 연결 (선택)</span>
+    <span class="task-time">⏱ 30~60분</span>
+  </div>
+  <div class="task-why">현재 서비스는 <code>uhagwi-community.vercel.app</code>으로만 접근 가능. <code>uhagwi.com</code>은 미등록 → 사용자가 친구·클라이언트에게 공유할 때 신뢰도 떨어짐. 도메인 사면 Vercel에서 5분 내 연결 가능.</div>
+  <ol>
+    <li><span class="checkbox"></span> 도메인 구매 — 가비아·후이즈·Cloudflare Registrar 중 택1 (연 1.5~3만원)</li>
+    <li><span class="checkbox"></span> Vercel 대시보드 → <code>uhagwi-community</code> 프로젝트 → <kbd>Settings</kbd> → <kbd>Domains</kbd></li>
+    <li><span class="checkbox"></span> <code>uhagwi.com</code> 입력 → <kbd>Add</kbd> 클릭</li>
+    <li><span class="checkbox"></span> Vercel이 알려주는 A 레코드(<code>76.76.21.21</code>) 또는 CNAME(<code>cname.vercel-dns.com</code>)을 도메인 등록기관 DNS 설정에 입력</li>
+    <li><span class="checkbox"></span> 5~30분 대기 후 <code>https://uhagwi.com</code> 접속 확인</li>
+    <li><span class="checkbox"></span> 환경변수 <code>NEXTAUTH_URL</code>을 <code>https://uhagwi.com</code>으로 변경</li>
+  </ol>
+  <div class="hint">⚠️ 도메인 변경 후 Discord OAuth Redirect URL도 같이 갱신 (U-2 참고).</div>
+</div>
+
+<div class="task crit">
+  <div class="task-head">
+    <span class="task-num">U-2a</span>
+    <span class="task-title">Discord OAuth 앱 등록 (개발자·AI 빌더용)</span>
+    <span class="task-time">⏱ 15분</span>
+  </div>
+  <div class="task-why">Discord = 30% AI 빌더 타깃 채널. Discord 봇과 같이 동작하므로 우하귀 핵심 인프라. 일반 사용자에겐 진입 장벽 있어 U-2b Google과 같이 박음.</div>
+  <ol>
+    <li><span class="checkbox"></span> <a href="https://discord.com/developers/applications" target="_blank">Discord Developer Portal</a> → <kbd>New Application</kbd> → 이름 "우하귀"</li>
+    <li><span class="checkbox"></span> 좌측 <kbd>OAuth2</kbd> → <kbd>General</kbd></li>
+    <li><span class="checkbox"></span> <strong>Redirects</strong>에 2줄 추가:
+      <ul>
+        <li><code>https://uhagwi-community.vercel.app/api/auth/callback/discord</code></li>
+        <li><code>http://localhost:3000/api/auth/callback/discord</code></li>
+      </ul>
+    </li>
+    <li><span class="checkbox"></span> <kbd>Save Changes</kbd></li>
+    <li><span class="checkbox"></span> <strong>Client ID</strong> 복사 → Vercel 환경변수 <code>DISCORD_CLIENT_ID</code></li>
+    <li><span class="checkbox"></span> <kbd>Reset Secret</kbd> → <strong>Client Secret</strong> 복사 → <code>DISCORD_CLIENT_SECRET</code></li>
+  </ol>
+  <div class="hint">📍 OAuth Scopes: <code>identify</code>, <code>email</code> 체크. <code>guilds</code>는 봇 합류 단계(U-6).</div>
+</div>
+
+<div class="task crit">
+  <div class="task-head">
+    <span class="task-num">U-2b</span>
+    <span class="task-title">Google OAuth 클라이언트 발급 (일반 사용자용)</span>
+    <span class="task-time">⏱ 15분</span>
+  </div>
+  <div class="task-why">Google = 70% 일반 사용자 타깃 (꽃집 사장·교사·마케터). 한국에서 가장 보편적인 SSO. Discord 계정 없는 사용자도 30초 안에 진입.</div>
+  <ol>
+    <li><span class="checkbox"></span> <a href="https://console.cloud.google.com" target="_blank">Google Cloud Console</a> → <kbd>Select a project</kbd> → <kbd>New Project</kbd> → 이름 "uhagwi"</li>
+    <li><span class="checkbox"></span> 좌측 메뉴 → <kbd>APIs &amp; Services</kbd> → <kbd>OAuth consent screen</kbd>
+      <ul>
+        <li>User Type: <strong>External</strong></li>
+        <li>App name: 우하귀, User support email: 본인 이메일</li>
+        <li>Scopes: <code>openid</code>, <code>email</code>, <code>profile</code> 추가</li>
+        <li>Test users 단계 통과 → <strong>publish app</strong> (검수 받지 않으면 외부 사용자 100명 제한 — 베타엔 충분)</li>
+      </ul>
+    </li>
+    <li><span class="checkbox"></span> <kbd>APIs &amp; Services</kbd> → <kbd>Credentials</kbd> → <kbd>+ Create Credentials</kbd> → <kbd>OAuth client ID</kbd>
+      <ul>
+        <li>Application type: <strong>Web application</strong></li>
+        <li>Name: "우하귀 Web"</li>
+        <li><strong>Authorized JavaScript origins</strong>:
+          <ul>
+            <li><code>https://uhagwi-community.vercel.app</code></li>
+            <li><code>http://localhost:3000</code></li>
+          </ul>
+        </li>
+        <li><strong>Authorized redirect URIs</strong>:
+          <ul>
+            <li><code>https://uhagwi-community.vercel.app/api/auth/callback/google</code></li>
+            <li><code>http://localhost:3000/api/auth/callback/google</code></li>
+          </ul>
+        </li>
+      </ul>
+    </li>
+    <li><span class="checkbox"></span> <kbd>Create</kbd> 클릭 → 팝업의 <strong>Client ID</strong> 복사 → Vercel <code>GOOGLE_CLIENT_ID</code></li>
+    <li><span class="checkbox"></span> <strong>Client secret</strong> 복사 → Vercel <code>GOOGLE_CLIENT_SECRET</code></li>
+  </ol>
+  <div class="hint">⚠️ 도메인 <code>uhagwi.com</code> 연결(U-1) 후엔 <strong>Authorized origins</strong>·<strong>redirect URIs</strong> 두 곳 다 갱신 필요.</div>
+</div>
+
+<div class="task crit">
+  <div class="task-head">
+    <span class="task-num">U-2c</span>
+    <span class="task-title">NextAuth 공통 환경변수 + 첫 Redeploy</span>
+    <span class="task-time">⏱ 5분</span>
+  </div>
+  <div class="task-why">U-2a·U-2b로 클라이언트 4개(<code>DISCORD_*</code>·<code>GOOGLE_*</code>) 박혔으니 NextAuth 자체 시크릿·URL 박고 한 번 재배포해야 환경변수 반영.</div>
+  <ol>
+    <li><span class="checkbox"></span> 로컬 터미널에서 <code>openssl rand -base64 32</code> 실행 → 출력 복사</li>
+    <li><span class="checkbox"></span> Vercel <kbd>Settings</kbd> → <kbd>Environment Variables</kbd>에 다음 추가:
+      <table>
+        <tr><th>키</th><th>값</th></tr>
+        <tr><td><code>NEXTAUTH_SECRET</code></td><td>방금 생성한 base64 32자</td></tr>
+        <tr><td><code>NEXTAUTH_URL</code></td><td><code>https://uhagwi-community.vercel.app</code> (또는 도메인 연결 후 <code>https://uhagwi.com</code>)</td></tr>
+      </table>
+    </li>
+    <li><span class="checkbox"></span> <kbd>Deployments</kbd> → 최신 배포 ⋯ → <kbd>Redeploy</kbd> (env 반영)</li>
+    <li><span class="checkbox"></span> <a href="https://uhagwi-community.vercel.app/login" target="_blank">/login 접속</a> → Google·Discord 두 버튼 표시 확인 → 각각 클릭 후 정상 콜백 확인</li>
+  </ol>
+</div>
+
+<div class="task crit">
+  <div class="task-head">
+    <span class="task-num">U-3</span>
+    <span class="task-title">Supabase 프로젝트 생성 + 마이그레이션 적용</span>
+    <span class="task-time">⏱ 25분</span>
+  </div>
+  <div class="task-why">DB 미연결 → publish·comments·reactions·harnesses 라우트가 모두 500 반환. localStorage만으로는 갤러리 공개·다른 사용자 카드 못 봄.</div>
+  <ol>
+    <li><span class="checkbox"></span> <a href="https://supabase.com/dashboard" target="_blank">Supabase Dashboard</a> → <kbd>New Project</kbd></li>
+    <li><span class="checkbox"></span> 이름 <code>uhagwi</code>, 리전 <strong>Northeast Asia (Seoul)</strong>, 비밀번호 별도 저장</li>
+    <li><span class="checkbox"></span> 생성 완료 후 <kbd>Settings</kbd> → <kbd>API</kbd> → 다음 값을 Vercel 환경변수에 박기:
+      <table>
+        <tr><th>키</th><th>Vercel 환경변수명</th></tr>
+        <tr><td>Project URL</td><td><code>NEXT_PUBLIC_SUPABASE_URL</code></td></tr>
+        <tr><td>anon public</td><td><code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code></td></tr>
+        <tr><td>service_role</td><td><code>SUPABASE_SERVICE_ROLE_KEY</code> ⚠️ 절대 클라이언트에 노출 금지</td></tr>
+      </table>
+    </li>
+    <li><span class="checkbox"></span> <kbd>SQL Editor</kbd> → <kbd>New query</kbd></li>
+    <li><span class="checkbox"></span> 로컬 <code>uhagwi/packages/db/supabase/migrations/</code> 폴더의 SQL 파일을 번호 순서로 복사·실행 (0001 → 0103 → 0104 → <strong>0105_google_oauth.sql</strong>)</li>
+    <li><span class="checkbox"></span> 또는 CLI 사용: <code>supabase link --project-ref &lt;ref&gt;</code> + <code>supabase db push</code></li>
+    <li><span class="checkbox"></span> <kbd>Authentication</kbd> → <kbd>Policies</kbd>에서 RLS 활성 여부 확인</li>
+  </ol>
+  <div class="hint">⚠️ 신규 마이그레이션 2개:
+    <ul>
+      <li><code>0103_phase2_manifest.sql</code> — Phase 2 산출물 manifest</li>
+      <li><strong><code>0105_google_oauth.sql</code></strong> — users 테이블에 google_id 추가 + discord_id NOT NULL 완화. <strong>U-2b Google OAuth와 함께 반드시 적용</strong> 안 하면 Google 로그인 사용자 upsert 실패.</li>
+    </ul>
+  </div>
+</div>
+
+<div class="task crit">
+  <div class="task-head">
+    <span class="task-num">U-4</span>
+    <span class="task-title">Anthropic API 키 박기 (인터뷰·분석)</span>
+    <span class="task-time">⏱ 5분</span>
+  </div>
+  <div class="task-why">키 없으면 <code>/api/interview/chat</code>·<code>/api/interview/analyze</code> 둘 다 동작 안 함 → 인터뷰 자체 불가.</div>
+  <ol>
+    <li><span class="checkbox"></span> <a href="https://console.anthropic.com/settings/keys" target="_blank">Anthropic Console</a> → <kbd>Create Key</kbd></li>
+    <li><span class="checkbox"></span> 키 복사 → Vercel 환경변수 <code>ANTHROPIC_API_KEY</code></li>
+    <li><span class="checkbox"></span> <kbd>Workspace</kbd> 결제 카드 등록 (인터뷰 1회당 Haiku 4.5 ~$0.005, Opus 4.7 분석 ~$0.02)</li>
+  </ol>
+  <div class="hint">💡 두타 하네스에 이미 키 있으면 재사용 가능 (요약본의 "두타 하네스에 있어 키 가서 찾아와" 메시지 참고).</div>
+</div>
+</section>
+
+<!-- ──────────────────────────────────────────────────────── -->
+<section>
+<h2 class="warn">🟡 권장 (며칠 내)</h2>
+
+<div class="task warn">
+  <div class="task-head">
+    <span class="task-num">U-5</span>
+    <span class="task-title">Upstash Redis 연결 (rate-limit 서버 측)</span>
+    <span class="task-time">⏱ 10분</span>
+  </div>
+  <div class="task-why">메모리 폴백은 박혀 있어 동작은 함. 다만 Vercel serverless는 인스턴스마다 메모리 분리 → 한 사용자가 다른 인스턴스로 라우팅되면 한도 우회 가능. 운영 가면 Upstash 필수.</div>
+  <ol>
+    <li><span class="checkbox"></span> <a href="https://console.upstash.com" target="_blank">Upstash Console</a> → <kbd>Create Database</kbd> → Redis</li>
+    <li><span class="checkbox"></span> 리전 <strong>ap-northeast-1 (Tokyo)</strong> · Eviction enabled</li>
+    <li><span class="checkbox"></span> 생성 후 <kbd>REST API</kbd> 탭의 URL·Token 복사 → Vercel 환경변수:
+      <ul>
+        <li><code>UPSTASH_REDIS_REST_URL</code></li>
+        <li><code>UPSTASH_REDIS_REST_TOKEN</code></li>
+      </ul>
+    </li>
+    <li><span class="checkbox"></span> 무료 티어 1만 명령/일 — MVP 충분</li>
+  </ol>
+</div>
+
+<div class="task warn">
+  <div class="task-head">
+    <span class="task-num">U-6</span>
+    <span class="task-title">Discord 봇 토큰 + Railway/Fly 배포</span>
+    <span class="task-time">⏱ 30분</span>
+  </div>
+  <div class="task-why">웹은 살아 있지만 봇이 죽어 있음 → 디스코드 서버에서 명령 응답·게시 알림·신규 멤버 동기화 불가. <code>apps/bot/</code>이 별도 배포 필요(Vercel은 봇 안 돌림).</div>
+  <ol>
+    <li><span class="checkbox"></span> Discord Developer Portal → <kbd>Bot</kbd> → <kbd>Reset Token</kbd> → 토큰 복사</li>
+    <li><span class="checkbox"></span> <kbd>Privileged Gateway Intents</kbd>에서 <strong>Server Members</strong>·<strong>Message Content</strong> 활성</li>
+    <li><span class="checkbox"></span> <a href="https://railway.app" target="_blank">Railway</a> 또는 <a href="https://fly.io" target="_blank">Fly.io</a> 가입</li>
+    <li><span class="checkbox"></span> Railway: <kbd>New Project</kbd> → <kbd>Deploy from GitHub</kbd> → <code>uhagwi-community</code> 선택 → Root Directory: <code>apps/bot</code></li>
+    <li><span class="checkbox"></span> 환경변수 <code>DISCORD_BOT_TOKEN</code>·<code>DISCORD_GUILD_ID</code>·<code>SUPABASE_*</code> 박기</li>
+    <li><span class="checkbox"></span> <kbd>Deploy</kbd> → 로그에서 <code>Logged in as ...</code> 확인</li>
+    <li><span class="checkbox"></span> Discord 서버에 봇 초대: OAuth2 URL Generator → scopes <code>bot applications.commands</code>, permissions <code>Send Messages, Read Message History, Manage Roles</code> 체크 → URL 복사 후 브라우저 열기</li>
+  </ol>
+</div>
+
+<div class="task warn">
+  <div class="task-head">
+    <span class="task-num">U-7</span>
+    <span class="task-title">초기 카탈로그 검수 (친밀 맥락 일반화 확인)</span>
+    <span class="task-time">⏱ 10분</span>
+  </div>
+  <div class="task-why">2026-05-05에 카드 4건 일반화했지만 사용자 본인이 보면 더 가릴 부분이 있을 수 있음 (빌더명 "이진명" 등).</div>
+  <ol>
+    <li><span class="checkbox"></span> <a href="https://uhagwi-community.vercel.app/gacha?admin=1" target="_blank">관리자 가챠</a> → <kbd>📦 전체 18장 채우기</kbd> → <kbd>전체 표시</kbd></li>
+    <li><span class="checkbox"></span> 18장 한 장씩 훑으면서 본인이 노출 안 됐으면 하는 카드 메모</li>
+    <li><span class="checkbox"></span> 노출 원치 않으면 다음 turn에 "X·Y·Z 카드 더 일반화해줘" 또는 "빌더명 익명화해줘" 요청</li>
+  </ol>
+</div>
+</section>
+
+<!-- ──────────────────────────────────────────────────────── -->
+<section>
+<h2 class="info">🔵 후속 (코드 작업 — 사용자가 트리거만 주면 됨)</h2>
+
+<div class="task">
+  <div class="task-head">
+    <span class="task-num">D-1</span>
+    <span class="task-title">interview/use-chat-state.ts 440 → 분할</span>
+    <span class="task-time">⏱ 코드 1턴</span>
+  </div>
+  <div class="task-why">300줄 한도 초과 + Hook deps lint 경고 (현재 ESLint 주석으로 막아둠). 분할하면 forward reference 정리되며 주석 제거 가능.</div>
+  <ol>
+    <li>트리거: <strong>"인터뷰 hook 분할해줘"</strong></li>
+    <li>분리: phase1·phase2·phase3·phase4 4개 hook 파일 + main 컨테이너</li>
+  </ol>
+</div>
+
+<div class="task">
+  <div class="task-head">
+    <span class="task-num">D-2</span>
+    <span class="task-title">harnesses/[slug]/page.tsx 421 → 분할</span>
+    <span class="task-time">⏱ 코드 1턴</span>
+  </div>
+  <div class="task-why">300줄 한도 초과. 카드 상세 화면 — view·comments·reactions·structure 섹션 분리.</div>
+</div>
+
+<div class="task">
+  <div class="task-head">
+    <span class="task-num">D-3</span>
+    <span class="task-title">api/interview/analyze/route.ts 410 → 분할</span>
+    <span class="task-time">⏱ 코드 1턴</span>
+  </div>
+  <div class="task-why">300줄 한도 초과. phase별 prompt 빌더를 <code>lib/interview/analyze-prompts/</code>로 분리.</div>
+</div>
+
+<div class="task">
+  <div class="task-head">
+    <span class="task-num">D-4</span>
+    <span class="task-title">interview/page.tsx 370 → 분할</span>
+    <span class="task-time">⏱ 코드 1턴</span>
+  </div>
+</div>
+
+<div class="task">
+  <div class="task-head">
+    <span class="task-num">D-5</span>
+    <span class="task-title">gallery/page.tsx 308 → 분할</span>
+    <span class="task-time">⏱ 코드 30분</span>
+  </div>
+  <div class="task-why">8줄만 초과. 필터 컴포넌트 분리하면 끝.</div>
+</div>
+
+<div class="task">
+  <div class="task-head">
+    <span class="task-num">D-6</span>
+    <span class="task-title">/api/webhooks/bot member.joined·kicked 분기 구현</span>
+    <span class="task-time">⏱ 코드 1턴</span>
+  </div>
+  <div class="task-why">현재 placeholder. 봇이 신규 가입자 알리면 Supabase users 테이블 동기화 + 환영 메시지.</div>
+</div>
+
+<div class="task">
+  <div class="task-head">
+    <span class="task-num">D-7</span>
+    <span class="task-title">/me 게시물 섹션 — Supabase posts 조회 연결</span>
+    <span class="task-time">⏱ 코드 30분</span>
+  </div>
+  <div class="task-why">현재 placeholder. U-3 Supabase 마이그레이션 적용 후 가능.</div>
+</div>
+
+<div class="task">
+  <div class="task-head">
+    <span class="task-num">D-8</span>
+    <span class="task-title">결제 연동 (Stripe 또는 토스페이먼츠)</span>
+    <span class="task-time">⏱ 코드 2~3턴</span>
+  </div>
+  <div class="task-why">Pro 구독 게이트가 alert() 폴백 상태. 결제 미연결이면 수익 모델 검증 불가.</div>
+  <ol>
+    <li>Pro 가챠 5장 ($9/월)</li>
+    <li>인터뷰 무제한 ($9/월 또는 묶음)</li>
+    <li>실제 자동화 가동 (MCP, $19/월)</li>
+  </ol>
+</div>
+</section>
+
+<!-- ──────────────────────────────────────────────────────── -->
+<section>
+<h2 class="ok">✅ 6시간 자동 개선 루프 결과 (자는 동안 박힘)</h2>
+<div class="task ok">
+  <p style="margin:0 0 12px;font-size:14px;color:var(--ink-800);">
+    <strong>2026-05-06 새벽 ~ 아침</strong> · 6 사이클 무인 진행 (1 cycle = 1시간) · 1949줄 → 554줄 + 17개 분할 파일.
+    모든 사이클 typecheck PASS 후 commit·push.
+  </p>
+  <table>
+    <tr><th>cycle</th><th>대상 파일</th><th>전후</th><th>분리 파일</th><th>commit</th></tr>
+    <tr>
+      <td>1</td>
+      <td><code>interview/use-chat-state.ts</code></td>
+      <td>440 → 88</td>
+      <td>_phases/ 5개 (state·use-phase{1,2,3,4})</td>
+      <td><code>0e1a9b8</code></td>
+    </tr>
+    <tr>
+      <td>2</td>
+      <td><code>harnesses/[slug]/page.tsx</code></td>
+      <td>421 → 125</td>
+      <td>_sections/ 3개 (MainContent·Sidebar·MarkdownBody)</td>
+      <td><code>4871494</code></td>
+    </tr>
+    <tr>
+      <td>3</td>
+      <td><code>api/interview/analyze/route.ts</code></td>
+      <td>410 → 78</td>
+      <td>lib/interview/analyze/ 5개 (schemas·anthropic·prompts·sanitize·dispatch)</td>
+      <td><code>44a1eea</code></td>
+    </tr>
+    <tr>
+      <td>4</td>
+      <td><code>interview/page.tsx</code></td>
+      <td>370 → 152</td>
+      <td>_sections/ 3개 (StartScreen·ProgressHeader·StatusCards)</td>
+      <td><code>6095e0a</code></td>
+    </tr>
+    <tr>
+      <td>5</td>
+      <td><code>gallery/page.tsx</code></td>
+      <td>308 → 111</td>
+      <td>_components/ 3개 (FilterBar·GalleryGrid·types)</td>
+      <td><code>cc5f5e5</code></td>
+    </tr>
+    <tr>
+      <td>6</td>
+      <td><code>api/webhooks/bot/route.ts</code> + 본 HTML 갱신</td>
+      <td>164 → 174</td>
+      <td>handle 충돌 5회 재시도 보강(이미 분기 박혀있어 검토만)</td>
+      <td>아래 commit</td>
+    </tr>
+  </table>
+  <p style="margin:12px 0 0;font-size:13px;color:var(--ink-600);">
+    💡 모두 ≤175줄로 CLAUDE.md 300줄 한도 충족. forward reference·hook deps lint 경고도 동시 해소(cycle 1).
+  </p>
+</div>
+
+<h2 class="ok" style="margin-top:24px;">✅ 이미 박힘 (확인용)</h2>
+<div class="task ok">
+  <ul style="margin:0;padding-left:20px;font-size:14px;">
+    <li>가챠 페이지 581줄 → 4파일 분할 (≤175줄)</li>
+    <li>관리자 모드 <code>?admin=1</code> — 무제한 뽑기·등급 강제·컬렉션 조작</li>
+    <li>친밀 맥락 일반화 — 4장 카드 + publish 라우트 검출기</li>
+    <li>뽑기 ⊥ 등록 분리 — 등록은 무료/사용자 선택</li>
+    <li><strong>NextAuth Google + Discord 2-프로바이더</strong> — <code>auth.ts</code>·<code>auth-user.ts</code>·<code>users.ts</code>·<code>/login</code> + Supabase 마이그 0105 (코드 박힘, 환경변수·콘솔 작업만 필요)</li>
+    <li>rate-limit Upstash 우선 + 메모리 폴백</li>
+    <li>/me 페이지 본인 컬렉션 표시 (localStorage 기반)</li>
+    <li>typecheck PASS · lint warning 2건 의도 명시 주석 처리</li>
+  </ul>
+</div>
+
+<div class="task warn">
+  <div class="task-head">
+    <span class="task-num">📌</span>
+    <span class="task-title">사업모델 #9 vs 현재 코드 정합성</span>
+  </div>
+  <table>
+    <tr><th>프로바이더</th><th>사업모델 결정</th><th>현재 코드</th><th>박는 시점</th></tr>
+    <tr><td>Discord</td><td>✅ 1년차</td><td>✅ 박힘</td><td>지금 (U-2a)</td></tr>
+    <tr><td>Google</td><td>✅ 1년차</td><td>✅ 박힘</td><td>지금 (U-2b)</td></tr>
+    <tr><td>Kakao</td><td>한국 정식 출시 시</td><td>❌ 미박음</td><td>한국 출시 D-7 정도 (NextAuth 커뮤니티 provider 필요)</td></tr>
+    <tr><td>Naver</td><td>한국 정식 출시 시</td><td>❌ 미박음</td><td>한국 출시 D-30 정도 (검수 시간 必)</td></tr>
+  </table>
+</div>
+</section>
+
+<footer>
+<p>🐙 우하귀 사용자 액션 리스트 v3 · 2026-05-06 · 6시간 자동 루프 완료</p>
+<p>v2 → v3 변경: 6시간 무인 개선 루프 결과 표 추가 (cycle 1~6 commit 6개 · 1949→554줄 분할 · 17 파일).</p>
+<p>다음 사용자 트리거 권장:
+   <strong>① U-2b Google OAuth 콘솔 작업</strong> (15분, 일반 사용자 진입로 확보) →
+   <strong>② U-3 Supabase 프로젝트 + 마이그 0105</strong> (25분, DB 연결) →
+   <strong>③ U-4 Anthropic 키</strong> (5분, 인터뷰 가동).
+   이 3건만 박으면 핵심 흐름 모두 살아남.
+</p>
+<p>완료할 때마다 □ → ☑로 표시(인쇄 후 펜).</p>
+</footer>
+
+</div>
+</body>
+</html>

@@ -51,10 +51,14 @@ function verifySignature(
 
 type MemberPayloadT = z.infer<typeof MemberPayload>;
 
+function randomSuffix(): string {
+  return Math.random().toString(36).slice(2, 8);
+}
+
 async function handleMemberJoined(p: MemberPayloadT): Promise<Response> {
   const db = getDb();
   const displayName = p.global_name ?? p.username ?? `user_${p.discord_id.slice(-6)}`;
-  const handle = `pending_${p.discord_id.slice(-8)}`.toLowerCase();
+  const baseHandle = `pending_${p.discord_id.slice(-8)}`.toLowerCase();
 
   const { data: existing } = await db
     .from('users')
@@ -71,21 +75,29 @@ async function handleMemberJoined(p: MemberPayloadT): Promise<Response> {
     return Response.json({ ok: true, action: 'reactivated', user_id: existing.id });
   }
 
-  const { data: inserted, error: insErr } = await db
-    .from('users')
-    .insert({
-      discord_id: p.discord_id,
-      handle,
-      display_name: displayName,
-      status: 'active',
-      can_post: true,
-    })
-    .select('id')
-    .single();
-  if (insErr || !inserted) {
-    return internal(`users insert 실패: ${insErr?.message ?? 'unknown'}`);
+  // handle 충돌 시 6자 suffix 붙여 재시도 (lib/db/users.ts 패턴 준용)
+  let handle = baseHandle;
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const { data: inserted, error: insErr } = await db
+      .from('users')
+      .insert({
+        discord_id: p.discord_id,
+        handle,
+        display_name: displayName,
+        status: 'active',
+        can_post: true,
+      })
+      .select('id')
+      .single();
+    if (!insErr && inserted) {
+      return Response.json({ ok: true, action: 'created', user_id: inserted.id });
+    }
+    if (insErr && insErr.code !== '23505') {
+      return internal(`users insert 실패: ${insErr.message}`);
+    }
+    handle = `${baseHandle}_${randomSuffix()}`.slice(0, 20);
   }
-  return Response.json({ ok: true, action: 'created', user_id: inserted.id });
+  return internal('users handle 발급 실패 — 5회 충돌');
 }
 
 async function handleMemberKicked(p: MemberPayloadT): Promise<Response> {
