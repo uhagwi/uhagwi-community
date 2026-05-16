@@ -94,7 +94,7 @@ export default async function HarnessGalleryPage() {
       {/* 시드 표시 시 안내 배너 */}
       {usingSeed ? (
         <p className="rounded-card bg-cream-100/80 px-4 py-2 text-xs text-[color:var(--color-ink-600)]">
-          🌱 데이터베이스 연결 전이라, 기능 데모용 하네스 6장을
+          🌱 데이터베이스 연결 전이라, 기능 데모용 하네스 {harnesses.length}장을
           <strong className="mx-1 text-brand-700">미리보기 시드</strong>로 보여드립니다.
         </p>
       ) : null}
