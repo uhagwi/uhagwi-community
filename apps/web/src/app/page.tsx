@@ -67,13 +67,21 @@ export default function LandingPage() {
                 30분 맞춤 진단 →
               </Link>
             </div>
-            <div className="mt-3 flex flex-col items-center gap-2 sm:flex-row md:justify-start">
+            <div className="mt-3 flex flex-col items-center gap-2 sm:flex-row sm:gap-4 md:justify-start">
               <Link
                 href="/gallery"
                 className="text-xs text-brand-700 underline hover:text-brand-900"
               >
                 🖼 전체 카탈로그 둘러보기 →
               </Link>
+              <a
+                href="https://uhagwi-ai-tips.netlify.app"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-brand-700 underline hover:text-brand-900"
+              >
+                💡 AI 꿀팁 채널 가기 →
+              </a>
             </div>
           </div>
 

@@ -16,6 +16,7 @@ const NAV_ITEMS = [
   { href: '/', label: '홈' },
   { href: '/harnesses', label: '갤러리' },
   { href: '/lab', label: '🧬 랩' },
+  { href: 'https://uhagwi-ai-tips.netlify.app', label: '💡 AI 꿀팁', external: true },
   { href: '/about', label: 'About' },
   { href: '/join', label: 'Discord' },
 ] as const;
@@ -56,15 +57,27 @@ export async function SiteHeader() {
           aria-label="주요 네비게이션"
           className="hidden flex-1 items-center justify-center gap-6 md:flex lg:gap-8"
         >
-          {NAV_ITEMS.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="text-sm font-medium text-[color:var(--color-ink-600)] transition-colors hover:text-brand-700"
-            >
-              {item.label}
-            </Link>
-          ))}
+          {NAV_ITEMS.map((item) =>
+            'external' in item && item.external ? (
+              <a
+                key={item.href}
+                href={item.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm font-medium text-[color:var(--color-ink-600)] transition-colors hover:text-brand-700"
+              >
+                {item.label}
+              </a>
+            ) : (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="text-sm font-medium text-[color:var(--color-ink-600)] transition-colors hover:text-brand-700"
+              >
+                {item.label}
+              </Link>
+            ),
+          )}
         </nav>
 
         {/* 우: 인증 + 모바일 햄버거 */}
@@ -119,15 +132,27 @@ export async function SiteHeader() {
               aria-label="모바일 네비게이션"
               className="absolute right-0 top-12 z-50 flex w-56 flex-col gap-1 rounded-xl border border-[color:var(--color-ink-300)]/50 bg-white p-2 shadow-float"
             >
-              {NAV_ITEMS.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className="rounded-lg px-3 py-2 text-sm text-[color:var(--color-ink-900)] transition hover:bg-brand-50 hover:text-brand-700"
-                >
-                  {item.label}
-                </Link>
-              ))}
+              {NAV_ITEMS.map((item) =>
+                'external' in item && item.external ? (
+                  <a
+                    key={item.href}
+                    href={item.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="rounded-lg px-3 py-2 text-sm text-[color:var(--color-ink-900)] transition hover:bg-brand-50 hover:text-brand-700"
+                  >
+                    {item.label}
+                  </a>
+                ) : (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className="rounded-lg px-3 py-2 text-sm text-[color:var(--color-ink-900)] transition hover:bg-brand-50 hover:text-brand-700"
+                  >
+                    {item.label}
+                  </Link>
+                ),
+              )}
               <div className="mt-1 border-t border-[color:var(--color-ink-300)]/50 pt-1">
                 {session ? (
                   <>

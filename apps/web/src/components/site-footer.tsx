@@ -12,6 +12,7 @@ const SECTIONS = [
     title: '제품',
     links: [
       { href: '/harnesses', label: '하네스 갤러리' },
+      { href: 'https://uhagwi-ai-tips.netlify.app', label: '💡 AI 꿀팁 채널', external: true },
       { href: '/about', label: 'About' },
       { href: '/join', label: 'Discord 서버' },
     ],

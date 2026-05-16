@@ -14,6 +14,7 @@ import {
   listPublishedHarnesses,
   type HarnessFeedRow,
 } from '@/lib/db/harnesses';
+import { getSeedFeedRows } from '@/lib/seed/showcase-harnesses';
 
 export const dynamic = 'force-dynamic';
 
@@ -45,7 +46,9 @@ async function safeListHarnesses(): Promise<HarnessFeedRow[]> {
 }
 
 export default async function HarnessGalleryPage() {
-  const harnesses = await safeListHarnesses();
+  const dbHarnesses = await safeListHarnesses();
+  const usingSeed = dbHarnesses.length === 0;
+  const harnesses = usingSeed ? getSeedFeedRows() : dbHarnesses;
 
   return (
     <div className="space-y-8">
@@ -87,6 +90,14 @@ export default async function HarnessGalleryPage() {
           총 {harnesses.length}개 하네스
         </span>
       </nav>
+
+      {/* 시드 표시 시 안내 배너 */}
+      {usingSeed ? (
+        <p className="rounded-card bg-cream-100/80 px-4 py-2 text-xs text-[color:var(--color-ink-600)]">
+          🌱 데이터베이스 연결 전이라, 기능 데모용 하네스 6장을
+          <strong className="mx-1 text-brand-700">미리보기 시드</strong>로 보여드립니다.
+        </p>
+      ) : null}
 
       {/* 카드 그리드 */}
       <section

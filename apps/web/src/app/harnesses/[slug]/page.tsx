@@ -9,6 +9,7 @@ import { getCurrentUserId } from '@/lib/auth-user';
 import { getHarnessBySlug, type HarnessDetailRow } from '@/lib/db/harnesses';
 import { listCommentsByHarness, type DbComment } from '@/lib/db/comments';
 import { getActiveReactions, type ReactionType } from '@/lib/db/reactions';
+import { findSeedBySlug } from '@/lib/seed/showcase-harnesses';
 import { MainContent } from './_sections/MainContent';
 import { Sidebar } from './_sections/Sidebar';
 
@@ -26,11 +27,12 @@ const dateFormatter = new Intl.DateTimeFormat('ko-KR', {
 
 async function safeGetHarness(slug: string): Promise<HarnessDetailRow | null> {
   try {
-    return await getHarnessBySlug(slug);
+    const row = await getHarnessBySlug(slug);
+    if (row) return row;
   } catch (err) {
     console.error('[detail] getHarnessBySlug failed:', err);
-    return null;
   }
+  return findSeedBySlug(slug);
 }
 
 async function safeListComments(harnessId: string): Promise<DbComment[]> {
