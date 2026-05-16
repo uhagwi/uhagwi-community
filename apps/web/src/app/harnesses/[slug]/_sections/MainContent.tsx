@@ -5,6 +5,8 @@ import { CommentForm } from '@/components/comment-form';
 import type { HarnessDetailRow } from '@/lib/db/harnesses';
 import type { DbComment } from '@/lib/db/comments';
 import { MarkdownBody } from './MarkdownBody';
+import { MermaidDiagram } from '@/components/mermaid-diagram';
+import { bodyToMermaid, extractFlowLine } from '@/lib/flow-to-mermaid';
 
 const FALLBACK_EMOJI = '🌊';
 
@@ -28,6 +30,8 @@ export function MainContent({
   currentUserId,
 }: Props) {
   const fallbackEmoji = harness.thumbnail_emoji ?? FALLBACK_EMOJI;
+  const flowLine = extractFlowLine(harness.body_md);
+  const mermaidChart = bodyToMermaid(harness.body_md);
 
   return (
     <div className="space-y-6">
@@ -72,6 +76,19 @@ export function MainContent({
           emojiClassName="text-[96px]"
         />
       </figure>
+
+      {mermaidChart && flowLine ? (
+        <section aria-labelledby="structure" className="space-y-3">
+          <h2 id="structure" className="text-lg font-semibold text-brand-800">
+            🗺 구조도
+          </h2>
+          <MermaidDiagram
+            chart={mermaidChart}
+            fallbackText={flowLine}
+            domId={`flow-${harness.id}`}
+          />
+        </section>
+      ) : null}
 
       <section aria-labelledby="purpose" className="space-y-3">
         <h2 id="purpose" className="text-lg font-semibold text-brand-800">📝 한줄요약</h2>
