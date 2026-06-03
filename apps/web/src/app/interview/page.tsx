@@ -5,11 +5,11 @@
  * 섹션은 _sections/ (StartScreen · ProgressHeader · StatusCards)로 분할.
  */
 
-import Link from 'next/link';
 import { useEffect, useRef } from 'react';
 import { ChatInput } from './components/ChatInput';
 import { TaskRecommendCard } from './components/TaskRecommendCard';
 import { AutomationDistillCard } from './components/AutomationDistillCard';
+import { BuildHandoffFooter } from './components/BuildHandoffFooter';
 import { useV6State } from './use-chat-state';
 import { StartScreen } from './_sections/StartScreen';
 import { ProgressHeader, CompleteBar } from './_sections/ProgressHeader';
@@ -139,13 +139,7 @@ export default function InterviewPage() {
           />
         </>
       ) : state.phase === 4 && state.phase4Result ? (
-        <footer className="border-t border-brand-100 bg-cream-50 px-4 py-4 md:px-6">
-          <div className="mx-auto max-w-[760px]">
-            <Link href="/" className="btn-cta block w-full text-center">
-              홈으로 돌아가기 →
-            </Link>
-          </div>
-        </footer>
+        <BuildHandoffFooter result={state.phase4Result} />
       ) : null}
     </div>
   );

@@ -9,6 +9,9 @@ dist/
 build/
 coverage/
 *.tsbuildinfo
+# 예외: 소스 코드의 build 디렉토리(하네스 에디터 라우트·lib)는 빌드 산출물이 아님
+!apps/web/src/app/build/
+!apps/web/src/lib/build/
 
 # 환경변수 (절대 커밋 금지)
 .env
