@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import type { Phase4Result } from '../phases';
 import { countBlocks, interviewToHarnessDraft, saveBuildDraft } from '@/lib/build/draft';
+import { saveRecommended } from '@/lib/build/recommended';
 
 interface Props {
   result: Phase4Result;
@@ -16,6 +17,15 @@ export function BuildHandoffFooter({ result }: Props) {
 
   const handoff = (intent: 'build' | 'publish') => {
     const draft = interviewToHarnessDraft(result);
+    // 추천 블록 원본 세트를 별도 저장 — 캔버스 삭제 후에도 '추천' 탭에서 재담을 수 있도록
+    const allRecommended = [
+      ...draft.memory,
+      ...draft.skills,
+      ...draft.agents,
+      ...draft.tools,
+      ...draft.gates,
+    ];
+    saveRecommended(allRecommended);
     saveBuildDraft(draft);
     const qs = intent === 'publish' ? '?from=interview&intent=publish' : '?from=interview';
     router.push(`/build${qs}`);

@@ -4,12 +4,12 @@
 // 탭: 추천·기성·이식·직접 작성. Phase 3에서 기성·이식 탭 활성화.
 
 import { useState } from 'react';
-import type { BlockKind } from '@/lib/build/draft';
+import type { BlockKind, HarnessDraft } from '@/lib/build/draft';
 import type { ArraySlot, ActiveSlot } from '../use-build-state';
 import { genBlockId } from '../use-build-state';
 import type { Block } from '@/lib/build/draft';
 import { SLOT_META } from './Canvas';
-import { CatalogShelf, ImportShelf } from './CatalogLists';
+import { CatalogShelf, ImportShelf, RecommendShelf } from './CatalogLists';
 
 // BlockKind → ArraySlot 매핑 (persona 제외)
 const KIND_TO_SLOT: Record<Exclude<BlockKind, 'persona'>, ArraySlot> = {
@@ -33,10 +33,11 @@ const TABS: TabKey[] = ['추천', '기성', '이식', '직접 작성'];
 
 interface CatalogProps {
   activeSlot: ActiveSlot;
+  activeDraft: HarnessDraft;
   onAddBlock: (slot: ArraySlot, block: Block) => void;
 }
 
-export function Catalog({ activeSlot, onAddBlock }: CatalogProps) {
+export function Catalog({ activeSlot, activeDraft, onAddBlock }: CatalogProps) {
   const [tab, setTab] = useState<TabKey>('직접 작성');
   const [kind, setKind] = useState<Exclude<BlockKind, 'persona'>>('skill');
   const [label, setLabel] = useState('');
@@ -105,11 +106,7 @@ export function Catalog({ activeSlot, onAddBlock }: CatalogProps) {
       ) : tab === '이식' ? (
         <ImportShelf onAddBlock={onAddBlock} />
       ) : tab === '추천' ? (
-        <div className="card md:p-4 text-center">
-          <p className="text-2xl">🔒</p>
-          <p className="mt-2 text-sm font-semibold text-brand-800">추천</p>
-          <p className="mt-1 text-xs text-[color:var(--color-ink-600)]">인터뷰 완료 후 활성화돼요</p>
-        </div>
+        <RecommendShelf activeDraft={activeDraft} onAddBlock={onAddBlock} />
       ) : (
         /* 직접 작성 폼 */
         <div className="card md:p-4 flex flex-col gap-3">

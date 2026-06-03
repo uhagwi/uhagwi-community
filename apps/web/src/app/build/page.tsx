@@ -83,6 +83,7 @@ export default function BuildPage() {
         <aside className="w-full md:w-[280px] md:shrink-0">
           <Catalog
             activeSlot={activeSlot}
+            activeDraft={draft}
             onAddBlock={(slot, block) => {
               addBlock(slot, block);
               setActiveSlot(slot);
