@@ -1,10 +1,13 @@
 'use client';
 
-// 미리보기 — 우측 패널. Phase 1 stub.
-// 완성도 체크리스트 + 슬롯별 블록 총계. Mermaid는 Phase 2에서.
+// 미리보기 — 우측 패널 (Phase 2).
+// 완성도 체크리스트 + 슬롯별 블록 총계 + Mermaid 실시간 구조도(디바운스).
 
+import { useEffect, useState } from 'react';
 import type { HarnessDraft } from '@/lib/build/draft';
 import { countBlocks } from '@/lib/build/draft';
+import { draftToFlowText, draftToMermaid } from '@/lib/build/draft-mermaid';
+import { MermaidDiagram } from '@/components/mermaid-diagram';
 import { SLOT_META } from './Canvas';
 
 interface CheckItem {
@@ -41,6 +44,18 @@ export function Preview({ draft }: PreviewProps) {
   const checklist = buildChecklist(draft);
   const passCount = checklist.filter((c) => c.pass).length;
   const total = countBlocks(draft);
+
+  // Mermaid 구조도 — 키 입력 폭주 방지 위해 350ms 디바운스.
+  // domId는 seq로 갱신해 mermaid 렌더 id 충돌 방지.
+  const [chart, setChart] = useState(() => draftToMermaid(draft));
+  const [seq, setSeq] = useState(0);
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setChart(draftToMermaid(draft));
+      setSeq((s) => s + 1);
+    }, 350);
+    return () => clearTimeout(t);
+  }, [draft]);
 
   return (
     <div className="flex flex-col gap-4">
@@ -94,12 +109,16 @@ export function Preview({ draft }: PreviewProps) {
         </ul>
       </div>
 
-      {/* Phase 2 안내 */}
-      <div className="card border-2 border-dashed border-brand-200 md:p-4">
-        <p className="text-xs font-bold text-brand-700">📊 Mermaid 구조도</p>
-        <p className="mt-1 text-xs text-[color:var(--color-ink-600)]">
-          Phase 2에서 블록 연결 구조도가 이 자리에 추가됩니다.
-        </p>
+      {/* Mermaid 실시간 구조도 */}
+      <div className="card md:p-4">
+        <p className="text-xs font-bold uppercase tracking-wider text-brand-600">📊 구조도</p>
+        <div className="mt-2">
+          <MermaidDiagram
+            chart={chart}
+            fallbackText={draftToFlowText(draft)}
+            domId={`build-preview-${seq}`}
+          />
+        </div>
       </div>
     </div>
   );
