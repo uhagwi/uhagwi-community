@@ -15,7 +15,7 @@ import { auth, signOut } from '@/lib/auth';
 const NAV_ITEMS = [
   { href: '/', label: '홈' },
   { href: '/harnesses', label: '갤러리' },
-  { href: '/lab', label: '🧬 랩' },
+  { href: '/build', label: '🧩 만들기' },
   { href: 'https://uhagwi-ai-tips.netlify.app', label: '💡 AI 꿀팁', external: true },
   { href: '/about', label: 'About' },
   { href: '/join', label: 'Discord' },
