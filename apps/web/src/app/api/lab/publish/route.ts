@@ -24,7 +24,7 @@ const Schema = z.object({
   persona_job: z.string().nullable().optional(),
   structure_mermaid: z.string().nullable().optional(),
   media_urls: z.array(z.string()).default([]),
-  source: z.literal('lab'),
+  source: z.enum(['lab', 'build']),
   lab_meta: z.object({
     creatureId: z.string().min(1),
     type: z.string(),
@@ -32,7 +32,29 @@ const Schema = z.object({
     isExisting: z.boolean(),
     feedCount: z.number(),
     statSnapshot: z.record(z.number()),
-  }),
+  }).optional(),
+  build_meta: z.object({
+    draftId: z.string().min(1),
+    version: z.number(),
+    blockCount: z.number(),
+  }).optional(),
+}).superRefine((data, ctx) => {
+  // source==='lab'이면 lab_meta 필수
+  if (data.source === 'lab' && !data.lab_meta) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['lab_meta'],
+      message: 'source가 lab이면 lab_meta가 필요합니다.',
+    });
+  }
+  // source==='build'이면 build_meta 필수
+  if (data.source === 'build' && !data.build_meta) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['build_meta'],
+      message: 'source가 build이면 build_meta가 필요합니다.',
+    });
+  }
 });
 
 type Body = z.infer<typeof Schema>;
@@ -48,9 +70,23 @@ function slugify(s: string): string {
     .slice(0, 60);
 }
 
+// source별 식별자 tail 추출
+function idTail(body: Body): string {
+  if (body.source === 'lab' && body.lab_meta) return body.lab_meta.creatureId.slice(-6);
+  if (body.source === 'build' && body.build_meta) return body.build_meta.draftId.slice(-6);
+  return 'x';
+}
+
+// source별 멱등성 키
+function idKey(body: Body): string {
+  if (body.source === 'lab' && body.lab_meta) return `lab:${body.lab_meta.creatureId}`;
+  if (body.source === 'build' && body.build_meta) return `build:${body.build_meta.draftId}`;
+  return `unknown:${Date.now()}`;
+}
+
 function makeSlug(body: Body): string {
   const base = slugify(body.title) || 'harness';
-  return `${base}-${body.lab_meta.creatureId.slice(-6)}`;
+  return `${base}-${idTail(body)}`;
 }
 
 function harnessRow(body: Body) {
@@ -118,7 +154,7 @@ export async function POST(req: NextRequest) {
   }
 
   const db = getDb();
-  const contentHash = `lab:${body.lab_meta.creatureId}`;
+  const contentHash = idKey(body);
 
   const { data: existingPost, error: lookupErr } = await db
     .from('posts')

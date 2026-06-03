@@ -9,6 +9,7 @@ import {
   type Block,
   type BlockKind,
   type HarnessDraft,
+  genDraftId,
   loadBuildDraft,
   saveBuildDraft,
 } from '@/lib/build/draft';
@@ -32,6 +33,7 @@ export function genBlockId(kind: BlockKind): string {
 // 빈 드래프트 생성 (origin: blank)
 function blankDraft(): HarnessDraft {
   return {
+    id: genDraftId(),
     version: 1,
     persona: { name: '', job: '', tone: '' },
     memory: [],

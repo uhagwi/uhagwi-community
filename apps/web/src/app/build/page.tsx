@@ -1,14 +1,17 @@
 'use client';
 
-// 나만의 하네스 에디터 — Phase 1 컨테이너.
-// 3-pane 레이아웃: 좌(카탈로그) / 중앙(캔버스) / 우(미리보기).
+// 나만의 하네스 에디터 — Phase 4 컨테이너.
+// 3-pane 레이아웃: 좌(카탈로그) / 중앙(캔버스) / 우(미리보기+발행+히스토리).
 // 드래프트는 localStorage에서만 로드 (useSearchParams 미사용).
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { useBuildState } from './use-build-state';
 import { Catalog } from './_components/Catalog';
 import { Canvas } from './_components/Canvas';
 import { Preview } from './_components/Preview';
+import { PublishBar } from './_components/PublishBar';
+import { VersionTimeline } from './_components/VersionTimeline';
 
 export default function BuildPage() {
   const state = useBuildState();
@@ -24,6 +27,11 @@ export default function BuildPage() {
     removeBlock,
     updateBlock,
   } = state;
+  // 버전 저장 / 발행 성공 시 VersionTimeline 재로드를 위한 key
+  const [historyKey, setHistoryKey] = useState(0);
+  function handleVersionSaved() {
+    setHistoryKey((k) => k + 1);
+  }
 
   // 로딩 중
   if (!loaded) {
@@ -96,9 +104,11 @@ export default function BuildPage() {
           />
         </main>
 
-        {/* 우측 — 미리보기 (≈300px) */}
-        <aside className="w-full md:w-[300px] md:shrink-0">
+        {/* 우측 — 미리보기 + 발행 + 버전 히스토리 (≈300px) */}
+        <aside className="w-full md:w-[300px] md:shrink-0 flex flex-col gap-4">
           <Preview draft={draft} />
+          <PublishBar draft={draft} onVersionSaved={handleVersionSaved} />
+          <VersionTimeline draftId={draft.id} refreshKey={historyKey} />
         </aside>
       </div>
     </div>

@@ -4,6 +4,13 @@
 
 import type { Phase4Result } from '@/app/interview/phases';
 
+// 안정적 드래프트 ID 생성 (발행 멱등성 키·버전 히스토리 키)
+export function genDraftId(): string {
+  const t = typeof Date !== 'undefined' ? Date.now().toString(36) : 'x';
+  const r = Math.random().toString(36).slice(2, 7);
+  return `draft_${t}_${r}`;
+}
+
 export type BlockKind = 'persona' | 'memory' | 'skill' | 'agent' | 'tool' | 'gate';
 export type BlockSource = 'recommended' | 'catalog' | 'custom' | 'imported';
 
@@ -17,7 +24,8 @@ export interface Block {
 }
 
 export interface HarnessDraft {
-  version: number; // 버전 히스토리(C-5)의 시작점. 수정 시 증가.
+  id: string;           // 발행 멱등성 키·버전 히스토리 키 (genDraftId로 생성)
+  version: number;      // 버전 히스토리(C-5)의 시작점. 수정 시 증가.
   persona: { name: string; job: string; tone: string };
   memory: Block[];
   skills: Block[];
@@ -108,6 +116,7 @@ export function interviewToHarnessDraft(r: Phase4Result): HarnessDraft {
   }
 
   return {
+    id: genDraftId(),
     version: 1,
     persona: {
       name: r.persona_name_kr,
@@ -144,7 +153,14 @@ export function loadBuildDraft(): HarnessDraft | null {
   if (typeof window === 'undefined') return null;
   try {
     const raw = window.localStorage.getItem(BUILD_DRAFT_KEY);
-    return raw ? (JSON.parse(raw) as HarnessDraft) : null;
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as HarnessDraft;
+    // 구버전 드래프트 (id 없음) → 자동 마이그레이션
+    if (!parsed.id) {
+      parsed.id = genDraftId();
+      saveBuildDraft(parsed);
+    }
+    return parsed;
   } catch {
     return null;
   }
