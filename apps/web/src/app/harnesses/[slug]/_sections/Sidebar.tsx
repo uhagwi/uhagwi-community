@@ -4,6 +4,7 @@ import { JuzzepReactions } from '@/components/juzzep-reactions';
 import { JuzzepBadge } from '@uhagwi/ui';
 import type { HarnessDetailRow } from '@/lib/db/harnesses';
 import type { ReactionType } from '@/lib/db/reactions';
+import { TransplantCard } from './TransplantCard';
 
 const FALLBACK_EMOJI = '🌊';
 
@@ -92,20 +93,18 @@ export function Sidebar({
         ) : null}
       </div>
 
-      <div className="card space-y-2 border-2 border-brand-200 bg-cream-50">
-        <h2 className="text-sm font-semibold text-brand-800">내 업무에 이식하기</h2>
-        <p className="text-xs text-[color:var(--color-ink-600)]">
-          Claude / ChatGPT / n8n / Zapier 등에 이 하네스를 복사할 수 있습니다.
-        </p>
-        <button
-          type="button"
-          className="w-full rounded-[10px] bg-brand-600 px-3 py-2 text-sm font-semibold text-white shadow-card transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60"
-          disabled
-          aria-label="이식 기능 준비 중 — Phase 2에 오픈"
-        >
-          이식하기 beta 🚀
-        </button>
-      </div>
+      <TransplantCard
+        harness={{
+          slug: harness.slug,
+          title: harness.title,
+          one_liner: harness.one_liner,
+          purpose: harness.purpose,
+          persona_name: harness.persona_name,
+          persona_job: harness.persona_job,
+          components: harness.components,
+          body_md: harness.body_md,
+        }}
+      />
     </aside>
   );
 }

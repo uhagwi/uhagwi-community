@@ -12,6 +12,7 @@ import { getActiveReactions, type ReactionType } from '@/lib/db/reactions';
 import { findSeedBySlug } from '@/lib/seed/showcase-harnesses';
 import { MainContent } from './_sections/MainContent';
 import { Sidebar } from './_sections/Sidebar';
+import { TransplantHeaderButton } from './_sections/TransplantCard';
 
 export const dynamic = 'force-dynamic';
 
@@ -98,7 +99,18 @@ export default async function HarnessDetailPage({ params }: { params: Params }) 
         </Link>
         <div className="flex gap-2">
           <button type="button" className="btn-ghost text-sm" disabled>공유</button>
-          <button type="button" className="btn-ghost text-sm" disabled>이식하기 beta</button>
+          <TransplantHeaderButton
+            harness={{
+              slug: harness.slug,
+              title: harness.title,
+              one_liner: harness.one_liner,
+              purpose: harness.purpose,
+              persona_name: harness.persona_name,
+              persona_job: harness.persona_job,
+              components: harness.components,
+              body_md: harness.body_md,
+            }}
+          />
         </div>
       </div>
 
