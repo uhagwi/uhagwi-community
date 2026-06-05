@@ -2,31 +2,19 @@
 
 import { useEffect, useMemo, useState } from 'react';
 
-/** 이식 대상 플랫폼별 상세 안내 (Phase 2 DB 기록 전 — 설명 + 복사만) */
+/** 이식 대상 — 코딩 에이전트 2종 (Claude Code · Codex). git/플러그인 설치가 목표, 현재는 설정 파일 주입 */
 const TARGETS = [
   {
-    key: 'claude',
-    label: 'Claude',
+    key: 'claude-code',
+    label: 'Claude Code',
     icon: '🟣',
-    how: '새 대화를 열고 아래 프롬프트를 첫 메시지로 붙여넣으세요. Claude Code라면 프로젝트 루트의 CLAUDE.md에 넣으면 세션마다 자동 적용됩니다.',
+    how: '이 하네스의 에이전트·스킬·오케스트레이션을 플러그인으로 설치하거나(git 마켓플레이스 패키징 시 claude plugin install로 원클릭), 아래 내용을 프로젝트 루트 CLAUDE.md에 넣으면 세션마다 자동 적용됩니다.',
   },
   {
-    key: 'chatgpt',
-    label: 'ChatGPT',
+    key: 'codex',
+    label: 'Codex',
     icon: '🟢',
-    how: '“맞춤 설정(Custom Instructions)” 또는 새 GPT의 Instructions 칸에 아래 프롬프트를 붙여넣으세요. 일반 대화라면 첫 메시지로 넣어도 됩니다.',
-  },
-  {
-    key: 'n8n',
-    label: 'n8n',
-    icon: '🔶',
-    how: 'AI Agent 또는 OpenAI/Anthropic 노드의 System Prompt 칸에 아래 내용을 붙여넣고, 앞단 트리거와 뒷단 액션 노드를 연결하세요.',
-  },
-  {
-    key: 'zapier',
-    label: 'Zapier',
-    icon: '🟠',
-    how: 'Zap의 AI 단계(OpenAI/Anthropic)에서 System/Prompt 필드에 아래 내용을 붙여넣고, 트리거·액션을 구성하세요.',
+    how: '프로젝트 루트의 AGENTS.md에 아래 내용을 넣으면 Codex가 세션마다 역할·규칙으로 적용합니다. (또는 첫 지시로 붙여넣기)',
   },
 ] as const;
 
@@ -66,7 +54,7 @@ function TransplantModal({
   harness: TransplantHarness;
   onClose: () => void;
 }) {
-  const [target, setTarget] = useState<TargetKey>('claude');
+  const [target, setTarget] = useState<TargetKey>('claude-code');
   const [copied, setCopied] = useState(false);
   const prompt = useMemo(() => buildPrompt(harness), [harness]);
   const active = TARGETS.find((t) => t.key === target)!;
@@ -186,7 +174,7 @@ export function TransplantCard({ harness }: { harness: TransplantHarness }) {
     <div className="card space-y-2 border-2 border-brand-200 bg-cream-50">
       <h2 className="text-sm font-semibold text-brand-800">내 업무에 이식하기</h2>
       <p className="text-xs text-[color:var(--color-ink-600)]">
-        Claude / ChatGPT / n8n / Zapier 등에 이 하네스를 복사할 수 있습니다.
+        Claude Code · Codex에 이 하네스를 설치할 수 있습니다.
       </p>
       <button
         type="button"
