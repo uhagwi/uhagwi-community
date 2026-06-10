@@ -55,17 +55,44 @@ export async function POST(req: NextRequest) {
   try {
     const result = await callAnthropic(apiKey, {
       model,
-      max_tokens: 4096,
+      max_tokens: 16384,
       system: systemPrompt,
       messages: [{ role: 'user' as const, content: userPrompt }],
     });
 
     const cleaned = stripCodeFence(extractText(result));
+    // 잘렸으면(max_tokens) 폴백으로 가리지 말고 즉시 명확히 실패 처리
+    if (result.stop_reason === 'max_tokens') {
+      return problem('internal', { detail: '분석 결과가 너무 길어 잘렸어요. 다시 시도해주세요.' });
+    }
     let parsedResult: unknown;
     try {
       parsedResult = JSON.parse(cleaned);
     } catch {
-      return problem('internal', { detail: `JSON 파싱 실패: ${cleaned.slice(0, 200)}` });
+      // 앞뒤 설명문 등으로 흔들렸을 때 — 첫 '{' ~ 마지막 '}' 만 잘라 재파싱
+      const s = cleaned.indexOf('{');
+      const e = cleaned.lastIndexOf('}');
+      if (s !== -1 && e > s) {
+        try {
+          parsedResult = JSON.parse(cleaned.slice(s, e + 1));
+        } catch {
+          /* 재파싱도 실패 → 아래에서 처리 */
+        }
+      }
+    }
+    if (parsedResult === undefined) {
+      const truncated = result.stop_reason === 'max_tokens';
+      console.error('[interview/analyze] JSON 파싱 실패', {
+        mode,
+        stop_reason: result.stop_reason,
+        output_tokens: result.usage.output_tokens,
+        tail: cleaned.slice(-160),
+      });
+      return problem('internal', {
+        detail: truncated
+          ? '분석 결과가 너무 길어 잘렸어요. 다시 시도해주세요.'
+          : '분석 결과 형식 오류예요. 다시 시도해주세요.',
+      });
     }
 
     sanitizeAutoCandidates(parsedResult);

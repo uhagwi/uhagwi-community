@@ -20,15 +20,16 @@ export function pickMode(body: RequestBody): AnalyzeMode {
 }
 
 export function pickModelAndSystem(mode: AnalyzeMode): { model: string; systemPrompt: string } {
+  // Opus 4.7은 이 분석에서 35~60초 + 출력 불안정(잘림) → Sonnet 4.6으로 전환(속도·안정성).
   switch (mode) {
     case 'phase2':
-      return { model: 'claude-opus-4-7', systemPrompt: PHASE2_TASK_RECOMMEND_PROMPT };
+      return { model: 'claude-sonnet-4-6', systemPrompt: PHASE2_TASK_RECOMMEND_PROMPT };
     case 'phase4':
-      return { model: 'claude-opus-4-7', systemPrompt: PHASE4_AUTOMATION_DISTILL_PROMPT };
+      return { model: 'claude-sonnet-4-6', systemPrompt: PHASE4_AUTOMATION_DISTILL_PROMPT };
     case 'theme':
       return { model: 'claude-haiku-4-5-20251001', systemPrompt: ANALYZE_THEME_PROMPT };
     case 'comprehensive':
-      return { model: 'claude-opus-4-7', systemPrompt: INTERVIEW_ANALYZE_PROMPT };
+      return { model: 'claude-sonnet-4-6', systemPrompt: INTERVIEW_ANALYZE_PROMPT };
   }
 }
 
@@ -48,7 +49,7 @@ export function buildUserPrompt(mode: AnalyzeMode, body: RequestBody): string {
   }
   if (mode === 'phase4') {
     const phase3Text = joinConversation(body.phase3_messages ?? []);
-    return `## Phase 1 인터뷰 (사람 파악)\n\n${conversationText}\n\n---\n\n## Phase 2 결과 (도출된 업무 후보)\n\n${body.phase2_result ?? '(없음)'}\n\n---\n\n## Phase 3 인터뷰 (자동화 욕구)\n\n${phase3Text || '(없음)'}\n\n---\n\n위 3 단계 데이터를 종합해 사용자가 *Phase 3에서 동의한* 업무를 자동화 후보 5~8개로 정제해주세요. JSON만 반환. 마크다운 코드 펜스 금지.`;
+    return `## Phase 1 인터뷰 (사람 파악)\n\n${conversationText}\n\n---\n\n## Phase 2 결과 (도출된 업무 후보)\n\n${body.phase2_result ?? '(없음)'}\n\n---\n\n## Phase 3 인터뷰 (자동화 욕구)\n\n${phase3Text || '(없음)'}\n\n---\n\n위 3 단계 데이터를 종합해 사용자가 *Phase 3에서 동의한* 업무를 자동화 후보로 정제해주세요. 동의한 만큼만 담되 보통 1~8개입니다(없는 욕구를 억지로 채우지 마세요). JSON만 반환. 마크다운 코드 펜스 금지.`;
   }
   if (mode === 'theme') {
     return `테마: ${body.theme_id}\n\n다음 대화를 분석해 시스템 프롬프트의 JSON 형식으로만 응답해주세요.\n\n---\n\n${conversationText}\n\n---\n\nJSON만 반환. 마크다운 코드 펜스 금지.`;

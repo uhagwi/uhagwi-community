@@ -29,13 +29,13 @@ export function validateAndRespond(
   const meta = MODE_META[mode];
   const validated = meta.schema.safeParse(parsedResult);
   if (!validated.success) {
-    return problem('internal', {
-      detail: meta.failDetail,
-      errors: validated.error.errors.map((e) => ({
-        field: e.path.join('.'),
-        message: e.message,
-      })),
-    });
+    const fieldErrors = validated.error.errors.map((e) => ({
+      field: e.path.join('.'),
+      message: e.message,
+    }));
+    // 진단: 어떤 필드가 스키마를 위반했는지 서버 로그로 남김
+    console.error(`[interview/analyze] ${meta.failDetail}`, fieldErrors.slice(0, 8));
+    return problem('internal', { detail: meta.failDetail, errors: fieldErrors });
   }
   return Response.json({
     ok: true,

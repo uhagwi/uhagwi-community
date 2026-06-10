@@ -17,7 +17,8 @@ interface Args {
 export function usePhase2({ state, setState }: Args) {
   const runPhase2 = useCallback(
     async (messages: ChatMessage[]) => {
-      setState((s) => ({ ...s, phase2Loading: true, phase2Error: null }));
+      // 분석 시작 즉시 phase 2로 전환 — 로딩·에러 카드가 보이게 (실패 시 재시도 가능)
+      setState((s) => ({ ...s, phase: 2, phase2Loading: true, phase2Error: null }));
       try {
         const res = await fetch('/api/interview/analyze', {
           method: 'POST',
@@ -29,7 +30,7 @@ export function usePhase2({ state, setState }: Args) {
         });
         if (!res.ok) throw new Error(await extractErrorDetail(res));
         const json = (await res.json()) as { ok: boolean; result: Phase2Result };
-        setState((s) => ({ ...s, phase2Result: json.result, phase2Loading: false, phase: 2 }));
+        setState((s) => ({ ...s, phase2Result: json.result, phase2Loading: false }));
       } catch (err) {
         const msg = err instanceof Error ? err.message : '알 수 없는 오류';
         setState((s) => ({ ...s, phase2Error: msg, phase2Loading: false }));

@@ -12,7 +12,8 @@ interface Args {
 export function usePhase4({ state, setState }: Args) {
   const runPhase4 = useCallback(
     async (phase3Messages: ChatMessage[]) => {
-      setState((s) => ({ ...s, phase4Loading: true, phase4Error: null }));
+      // 분석 시작 즉시 phase 4로 전환 — 로딩·에러 카드가 보이게 (실패 시 재시도 가능)
+      setState((s) => ({ ...s, phase: 4, phase4Loading: true, phase4Error: null }));
       try {
         const res = await fetch('/api/interview/analyze', {
           method: 'POST',
@@ -30,7 +31,6 @@ export function usePhase4({ state, setState }: Args) {
           ...s,
           phase4Result: json.result,
           phase4Loading: false,
-          phase: 4,
           finishedAt: new Date().toISOString(),
         }));
       } catch (err) {

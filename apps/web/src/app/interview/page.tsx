@@ -24,14 +24,22 @@ export default function InterviewPage() {
     retryPhase4, reset,
   } = useV6State();
 
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const mainRef = useRef<HTMLElement>(null);
+
+  // 마지막 메시지 내용까지 의존성에 포함 — 답변이 채워질 때도 따라 내려간다
+  const lastPhase1Content = state.phase1Messages[state.phase1Messages.length - 1]?.content;
+  const lastPhase3Content = state.phase3Messages[state.phase3Messages.length - 1]?.content;
 
   useEffect(() => {
-    scrollRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    const el = mainRef.current;
+    if (!el) return;
+    el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
   }, [
     state.phase,
     state.phase1Messages.length,
     state.phase3Messages.length,
+    lastPhase1Content,
+    lastPhase3Content,
     streaming,
     state.phase2Loading,
     state.phase4Loading,
@@ -46,7 +54,7 @@ export default function InterviewPage() {
   }
 
   return (
-    <div className="-mx-4 -my-8 flex min-h-[calc(100vh-4rem)] flex-col md:-mx-6 md:-my-12">
+    <div className="-mx-4 -my-8 flex h-[calc(100dvh-3.5rem)] flex-col md:-mx-6 md:-my-12 md:h-[calc(100dvh-4rem)]">
       <ProgressHeader
         phase={state.phase}
         phase2Loading={state.phase2Loading}
@@ -54,12 +62,23 @@ export default function InterviewPage() {
         onReset={reset}
       />
 
-      <main className="flex-1 overflow-y-auto px-4 py-6 md:px-6">
+      <main ref={mainRef} className="min-h-0 flex-1 overflow-y-auto px-4 py-6 md:px-6">
         <div className="mx-auto max-w-[760px] space-y-4">
           {state.phase === 0 ? (
             <StartScreen onStart={startInterview} />
           ) : state.phase === 1 ? (
-            <ChatList messages={state.phase1Messages} streaming={streaming} />
+            <>
+              <ChatList messages={state.phase1Messages} streaming={streaming} />
+              {/* 과거 세션 좌초 복구 — phase 1에 머문 채 완료된 상태 */}
+              {state.phase1Done && !state.phase2Loading ? (
+                <ErrorCard
+                  title="업무 분석이 완료되지 않았어요"
+                  detail={state.phase2Error ?? '이전 세션에서 분석이 중단됐어요. 다시 시도해주세요.'}
+                  onRetry={retryPhase2}
+                  retryLabel="🔄 업무 분석 다시 시도"
+                />
+              ) : null}
+            </>
           ) : state.phase === 2 ? (
             state.phase2Loading ? (
               <LoadingCard
@@ -78,7 +97,18 @@ export default function InterviewPage() {
               />
             ) : null
           ) : state.phase === 3 ? (
-            <ChatList messages={state.phase3Messages} streaming={streaming} />
+            <>
+              <ChatList messages={state.phase3Messages} streaming={streaming} />
+              {/* 과거 세션 좌초 복구 — phase 3에 머문 채 완료된 상태 */}
+              {state.phase3Done && !state.phase4Loading ? (
+                <ErrorCard
+                  title="자동화 후보 분석이 완료되지 않았어요"
+                  detail={state.phase4Error ?? '이전 세션에서 분석이 중단됐어요. 다시 시도해주세요.'}
+                  onRetry={retryPhase4}
+                  retryLabel="🔄 자동화 후보 다시 시도"
+                />
+              ) : null}
+            </>
           ) : state.phase === 4 ? (
             state.phase4Loading ? (
               <LoadingCard
@@ -103,8 +133,6 @@ export default function InterviewPage() {
               {error}
             </div>
           ) : null}
-
-          <div ref={scrollRef} />
         </div>
       </main>
 

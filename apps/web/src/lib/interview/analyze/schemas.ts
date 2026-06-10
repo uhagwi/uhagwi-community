@@ -43,7 +43,7 @@ export const Phase2ResultSchema = z.object({
         discovery_type: z.enum(['explicit', 'inferred']),
       }),
     )
-    .min(6)
+    .min(3) // 짧은 인터뷰면 적게 나올 수 있음 (구 min(6)은 정상 출력을 거부할 위험)
     .max(15),
 });
 
@@ -51,12 +51,15 @@ export const Phase4ResultSchema = z.object({
   persona_code: z.string().min(2).max(40),
   persona_name_kr: z.string().min(2).max(80),
   summary: z.string().min(20).max(1500),
-  automation_priorities: z.object({
-    must_have: z.array(z.string()).min(0).max(5),
-    want: z.array(z.string()).min(0).max(5),
-    off_limits: z.array(z.string()).min(0).max(5),
-  }),
-  quality_bar: z.string().min(0).max(400),
+  // 누락에 관대하게 — 모델이 일부 배열/키를 빠뜨려도 []로 통과 (구버전은 누락 시 500)
+  automation_priorities: z
+    .object({
+      must_have: z.array(z.string()).max(5).default([]),
+      want: z.array(z.string()).max(5).default([]),
+      off_limits: z.array(z.string()).max(5).default([]),
+    })
+    .default({ must_have: [], want: [], off_limits: [] }),
+  quality_bar: z.string().max(400).default(''),
   auto_candidates: z
     .array(
       z.object({
@@ -70,13 +73,13 @@ export const Phase4ResultSchema = z.object({
         first_demo_priority: z.enum(['high', 'medium', 'low']),
       }),
     )
-    .min(4)
+    .min(1) // 사용자가 동의한 것만 담으므로 1~10. (구 min(4)는 정상 출력을 거부해 500 유발)
     .max(10),
   total_save_min_per_week: z.number().int().min(0).max(10000),
   recommended_first_demo_rank: z.number().int().min(1).max(10),
   creature_type: z.enum(['coder', 'writer', 'analyst', 'designer', 'researcher']),
   creature_personality: z.string().min(2).max(120),
-  pro_required_features: z.array(z.string()).min(1).max(8),
+  pro_required_features: z.array(z.string()).max(8).default([]),
 });
 
 export const ThemeAnalyzeResultSchema = z.object({

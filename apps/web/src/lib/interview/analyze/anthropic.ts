@@ -7,6 +7,8 @@
 export type AnthropicResponse = {
   content: Array<{ type: 'text'; text: string } | { type: string; [k: string]: unknown }>;
   usage: { input_tokens: number; output_tokens: number };
+  // 'max_tokens'면 출력이 잘린 것 — 분석 JSON 파싱 실패 원인 진단용
+  stop_reason?: string | null;
 };
 
 type AnthropicError = { type: 'error'; error: { type: string; message: string } };
