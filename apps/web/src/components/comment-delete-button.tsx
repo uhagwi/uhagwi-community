@@ -22,7 +22,7 @@ export function CommentDeleteButton({ commentId, className = '' }: CommentDelete
 
   const handleClick = () => {
     if (isPending) return;
-    if (!confirm('이 주접 댓글을 삭제하시겠어요?')) return;
+    if (!confirm('이 응원 댓글을 삭제하시겠어요?')) return;
     setError(null);
 
     startTransition(async () => {

@@ -69,7 +69,7 @@
     @apply inline-flex items-center justify-center rounded-[10px] border border-brand-600 bg-cream-50 px-5 py-3 font-semibold text-brand-700 transition hover:bg-brand-50;
   }
 
-  /* CTA 강조형 — Hero 전용. 딥퍼플 채움 + 주접 hover outline */
+  /* CTA 강조형 — Hero 전용. 딥퍼플 채움 + 응원 hover outline */
   .btn-cta {
     @apply inline-flex items-center justify-center rounded-[12px] bg-brand-600 px-6 py-3.5 text-base font-semibold text-white shadow-card transition hover:bg-brand-700 hover:shadow-float
       focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-juzzep-500 md:text-lg;
@@ -98,7 +98,7 @@
       linear-gradient(180deg, #fffdf7 0%, #fdf8e8 60%, #f4f1fa 100%);
   }
 
-  /* 주접 댓글 말풍선 */
+  /* 응원 댓글 말풍선 */
   .comment-bubble {
     @apply relative rounded-2xl bg-white px-4 py-3 text-sm shadow-card;
   }

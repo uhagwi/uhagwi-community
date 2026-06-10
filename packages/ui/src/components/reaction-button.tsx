@@ -9,7 +9,7 @@ interface Props {
 }
 
 /**
- * 주접 리액션 버튼 placeholder.
+ * 응원 리액션 버튼 placeholder.
  * 실제 낙관적 업데이트·Idempotency-Key 로직은 apps/web 에서 주입.
  * TODO: docs/service-dev/02_design/api.md §POST /reactions 연동
  */

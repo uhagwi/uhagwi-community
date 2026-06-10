@@ -120,10 +120,10 @@ export function MainContent({
       <section aria-labelledby="comments" className="space-y-4">
         <div className="flex items-center justify-between">
           <h2 id="comments" className="text-lg font-semibold text-brand-800">
-            💬 주접 댓글 ({comments.length})
+            💬 응원 댓글 ({comments.length})
           </h2>
           <span className="text-xs text-[color:var(--color-ink-600)]">
-            평균 주접지수 {juzzepAvg}
+            평균 응원지수 {juzzepAvg}
           </span>
         </div>
         <CommentForm harnessId={harness.id} isAuthenticated={isAuthenticated} />

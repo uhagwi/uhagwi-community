@@ -131,7 +131,7 @@ export function TeaserCard({ emoji, title, tagline, juzzep, author }: TeaserCard
           {emoji}
         </span>
         <span className="inline-flex items-center gap-1 rounded-pill bg-juzzep-400/15 px-2.5 py-1 text-xs font-semibold text-juzzep-500">
-          🔥 주접지수 {juzzep}
+          🔥 응원지수 {juzzep}
         </span>
       </div>
       <h3 className="text-display text-xl leading-snug text-brand-900 md:text-2xl">{title}</h3>
@@ -144,7 +144,7 @@ export function TeaserCard({ emoji, title, tagline, juzzep, author }: TeaserCard
 }
 
 // ------------------------------------------------------------
-// 주접 댓글 비교 블록 (§5. 우하귀의 말투)
+// 응원 댓글 비교 블록 (§5. 우하귀의 말투)
 // ------------------------------------------------------------
 export function JuzzepCompare() {
   return (
@@ -182,13 +182,13 @@ export function JuzzepCompare() {
           <p className="font-medium text-brand-900">
             이 하네스 진짜 조각이다 🔥 검증이 형 일 잘하시네
           </p>
-          <p className="mt-1 text-xs text-juzzep-500">주접지수 ███████░ 87 · @소영</p>
+          <p className="mt-1 text-xs text-juzzep-500">응원지수 ███████░ 87 · @소영</p>
         </div>
         <div className="comment-bubble comment-bubble--juzzep">
           <p className="text-brand-900">
             이 YAML 내가 키울게... 들여쓰기 너무 단정해 🤌
           </p>
-          <p className="mt-1 text-xs text-juzzep-500">주접지수 ██████░░ 74 · @하네</p>
+          <p className="mt-1 text-xs text-juzzep-500">응원지수 ██████░░ 74 · @하네</p>
         </div>
       </article>
     </div>

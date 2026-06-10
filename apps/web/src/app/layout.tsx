@@ -13,12 +13,12 @@ export const metadata: Metadata = {
     template: '%s · 우하귀',
   },
   description:
-    '내가 만든 AI 하네스를 자랑하고 주접 받는 커뮤니티. 꽃집·약국·교사·학생 — 누구나 자기 하네스를 소개하세요.',
-  keywords: ['AI 하네스', 'Claude', '하네스 커뮤니티', '우하귀', '주접', 'AI 엔지니어링'],
+    '내가 만든 AI 하네스를 자랑하고 응원 받는 커뮤니티. 꽃집·약국·교사·학생 — 누구나 자기 하네스를 소개하세요.',
+  keywords: ['AI 하네스', 'Claude', '하네스 커뮤니티', '우하귀', '응원', 'AI 엔지니어링'],
   metadataBase: new URL(process.env.NEXTAUTH_URL ?? 'http://localhost:3000'),
   openGraph: {
     title: '우하귀 — 우리 하네스 귀엽지',
-    description: '내 AI 하네스 자랑하고 주접 받기',
+    description: '내 AI 하네스 자랑하고 응원 받기',
     locale: 'ko_KR',
     type: 'website',
     images: [{ url: '/og-image.svg', width: 1200, height: 630, alt: '우하귀 — 우리 하네스 귀엽지' }],

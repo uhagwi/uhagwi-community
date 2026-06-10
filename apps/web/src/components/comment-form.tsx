@@ -1,5 +1,5 @@
 /**
- * CommentForm — 주접 댓글 작성 폼
+ * CommentForm — 응원 댓글 작성 폼
  * 근거: docs/service-dev/02_design/ui.md §3-5 JuzzepComment · api.md §2-5
  *
  * - textarea + 글자 카운터(1000자 한도)
@@ -71,14 +71,14 @@ export function CommentForm({ harnessId, isAuthenticated, onCreated }: CommentFo
         role="status"
       >
         <p className="text-sm text-[color:var(--color-ink-600)]">
-          Discord 로그인 후 주접 댓글을 남길 수 있어요 🤌
+          Discord 로그인 후 응원 댓글을 남길 수 있어요 🤌
         </p>
         <a
           href="/login"
           className="btn-primary mt-3 inline-block text-xs"
           aria-label="Discord 로그인 페이지로 이동"
         >
-          로그인하고 주접 쓰기
+          로그인하고 응원 쓰기
         </a>
       </div>
     );
@@ -88,7 +88,7 @@ export function CommentForm({ harnessId, isAuthenticated, onCreated }: CommentFo
     <form
       onSubmit={handleSubmit}
       className="card space-y-3"
-      aria-label="주접 댓글 작성"
+      aria-label="응원 댓글 작성"
     >
       <label htmlFor={fieldId} className="sr-only">
         댓글 내용
@@ -100,7 +100,7 @@ export function CommentForm({ harnessId, isAuthenticated, onCreated }: CommentFo
         onChange={(e) => setBody(e.target.value)}
         rows={3}
         maxLength={MAX_LEN + 100} // 살짝 여유 둬서 카운터 over 시각화 가능
-        placeholder="이 하네스 어떻게 보셨나요? 주접 한 마디 부탁드려요 🤌"
+        placeholder="이 하네스 어떻게 보셨나요? 응원 한 마디 부탁드려요 🤌"
         aria-invalid={overLen ? 'true' : undefined}
         aria-describedby={error ? errId : undefined}
         className="w-full resize-none rounded-[10px] border border-[color:var(--color-ink-300)] bg-white px-3 py-2 text-sm leading-relaxed text-[color:var(--color-ink-900)] placeholder:text-[color:var(--color-ink-300)] focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
@@ -118,7 +118,7 @@ export function CommentForm({ harnessId, isAuthenticated, onCreated }: CommentFo
           aria-busy={isPending}
           className="btn-primary text-xs disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {isPending ? '등록 중…' : '주접 등록'}
+          {isPending ? '등록 중…' : '응원 등록'}
         </button>
       </div>
       {error ? (

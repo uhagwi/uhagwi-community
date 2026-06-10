@@ -7,7 +7,7 @@
  *  2) 하네스란? — Agent = Model + Harness 정의 + 자동차 비유 3아이콘
  *  3) 타겟 2장 — AI 써야 하는 모두(70%) · 하네스 빌더(30%)
  *  4) Teaser 갤러리 — 범용 검증·개선·서비스 개발 3장
- *  5) 주접 문화 — 보통 커뮤니티 vs 우하귀 댓글 비교
+ *  5) 응원 문화 — 보통 커뮤니티 vs 우하귀 댓글 비교
  *  6) Final CTA — "내 하네스 자랑하러 가자"
  */
 import Link from 'next/link';
@@ -184,7 +184,7 @@ export default function LandingPage() {
               badgeTone="juzzep"
               title="하네스 빌더"
               subtitle="AI 실무자·에이전트 빌더·노코드 헤비유저"
-              lead="실전 시스템 포스팅하고 주접 리액션으로 보상받는다."
+              lead="실전 시스템 포스팅하고 응원 리액션으로 보상받는다."
               bullets={[
                 '내 하네스를 구경하고 피드백할 사람이 생긴다',
                 '평가 배틀 · 오늘의 파이프라인 상시 노출',
@@ -229,7 +229,7 @@ export default function LandingPage() {
       </section>
 
       {/* ============================================================ */}
-      {/* 5. 주접 문화 */}
+      {/* 5. 응원 문화 */}
       {/* ============================================================ */}
       <section
         aria-labelledby="juzzep-title"
@@ -240,10 +240,10 @@ export default function LandingPage() {
             우하귀의 말투
           </p>
           <h2 id="juzzep-title" className="text-display text-3xl text-brand-900 md:text-[40px]">
-            &quot;건조한 리뷰&quot; 말고 &quot;주접&quot;
+            &quot;건조한 리뷰&quot; 말고 &quot;응원&quot;
           </h2>
           <p className="mx-auto mt-4 max-w-[640px] text-base text-[color:var(--color-ink-600)] md:text-lg">
-            K-밈 대표 양식인 주접 문화를 기술 디테일과 합친다. 낙차에서 재미가, 과잉 애정에서 정서적 보상이 나온다.
+            K-밈 대표 양식인 응원 문화를 기술 디테일과 합친다. 낙차에서 재미가, 과잉 애정에서 정서적 보상이 나온다.
           </p>
           <JuzzepCompare />
         </div>

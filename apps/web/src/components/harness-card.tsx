@@ -107,9 +107,9 @@ export function HarnessCard({ harness }: HarnessCardProps) {
           <div className="flex items-center justify-between">
             <span
               className="inline-flex items-center gap-1 rounded-pill bg-juzzep-400/20 px-2 py-0.5 font-medium text-juzzep-500"
-              aria-label={`주접지수 ${juzzep}점`}
+              aria-label={`응원지수 ${juzzep}점`}
             >
-              주접 {juzzep}
+              응원 {juzzep}
             </span>
             <span className="flex items-center gap-2" aria-label={`총 리액션 ${totalReact}개`}>
               <span>❤ {reaction_counts.heart}</span>

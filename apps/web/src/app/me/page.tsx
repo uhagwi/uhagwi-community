@@ -3,7 +3,7 @@
  * 근거: docs/service-dev/02_design/ui.md §2-6
  *
  * 구성: 헤더(아바타·이름·통계) + 탭(컬렉션·게시물) + MyCollection 클라이언트 컴포넌트
- * 후속: 게시물 탭은 Supabase posts 조회 연결, 받은 주접·통계 누적은 W2 단계.
+ * 후속: 게시물 탭은 Supabase posts 조회 연결, 받은 응원·통계 누적은 W2 단계.
  */
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
@@ -25,7 +25,7 @@ export default async function MePage() {
         <div className="flex-1 space-y-1">
           <h1 className="text-xl font-bold text-brand-900">{session.user?.name ?? '나'}</h1>
           <p className="text-sm text-[color:var(--color-ink-600)]">
-            컬렉션은 localStorage 기반 — 게시·받은 주접 누적은 곧 합류
+            컬렉션은 localStorage 기반 — 게시·받은 응원 누적은 곧 합류
           </p>
         </div>
         <div className="flex gap-2">

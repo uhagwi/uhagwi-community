@@ -126,7 +126,7 @@ apps/web/
 - [ ] Supabase 실제 쿼리 · RLS 연동
 - [ ] NextAuth Supabase Adapter 활성화 · users upsert
 - [ ] 리액션 낙관적 업데이트 · Idempotency-Key
-- [ ] 주접지수 API (rule + Haiku)
+- [ ] 응원지수 API (rule + Haiku)
 - [ ] Mermaid SSR 렌더러
 - [ ] 포스팅 Wizard 3-step 실제 저장
 

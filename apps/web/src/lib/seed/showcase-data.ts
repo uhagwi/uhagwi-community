@@ -6,7 +6,7 @@
  * 한 항목 1줄로 압축 (builder가 HarnessDetailRow로 확장).
  *
  * 필드: s=slug e=emoji t=title pn=페르소나 pj=직무 c=카테고리
- *       o=한줄소개 pp=목적 k=구성요소 g=태그 v=조회 j=주접
+ *       o=한줄소개 pp=목적 k=구성요소 g=태그 v=조회 j=응원
  *       r=[heart,fire,bow,pinch] d=발행일 fig=한줄그림 pl=일상언어
  */
 export type RawSeed = {

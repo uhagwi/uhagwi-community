@@ -11,7 +11,7 @@ import Link from 'next/link';
 export const metadata: Metadata = {
   title: 'About — 우하귀는 어떤 커뮤니티?',
   description:
-    'Agent = Model + Harness. 우하귀는 AI 하네스를 자랑하고 주접 받으며 배우는 모두의 커뮤니티입니다.',
+    'Agent = Model + Harness. 우하귀는 AI 하네스를 자랑하고 응원 받으며 배우는 모두의 커뮤니티입니다.',
 };
 
 // 하네스 11가지 구성요소 — 기획안 §1-A-4 표준 해부도
@@ -38,7 +38,7 @@ const ROADMAP = [
     bullets: [
       '하네스 23종 시드 콘텐츠 업로드',
       '일반인 · 실무자 혼합 시드 멤버 30명',
-      '운영자가 직접 주접 톤 시연 → 문화 DNA 심기',
+      '운영자가 직접 응원 톤 시연 → 문화 DNA 심기',
     ],
   },
   {
@@ -46,9 +46,9 @@ const ROADMAP = [
     window: '2026.07 ~ 10',
     title: '웹 플랫폼 오픈',
     bullets: [
-      '하네스 갤러리 + 주접 댓글 + 원클릭 이식',
+      '하네스 갤러리 + 응원 댓글 + 원클릭 이식',
       '"우리 동네 하네스" 직업별 필터 런칭',
-      'PMF 측정 · WAU/DAU · 주접 어휘 5개 정착',
+      'PMF 측정 · WAU/DAU · 응원 어휘 5개 정착',
     ],
   },
   {
@@ -58,7 +58,7 @@ const ROADMAP = [
     bullets: [
       '노코드 하네스 템플릿 마켓 오픈',
       '기업용 사내 하네스 공유방 SaaS 출시',
-      '오프라인 밋업 + 주접 어휘 사전 출간',
+      '오프라인 밋업 + 응원 어휘 사전 출간',
     ],
   },
 ] as const;
@@ -76,7 +76,7 @@ export default function AboutPage() {
           <br className="md:hidden" /> 어떤 곳인가요?
         </h1>
         <p className="mx-auto mt-5 max-w-[640px] text-base text-[color:var(--color-ink-600)] md:text-lg">
-          AI 하네스를 자랑하고 주접 받으며 배우는, 누구나 AX·DX 전환을 함께하는 모두의 커뮤니티입니다.
+          AI 하네스를 자랑하고 응원 받으며 배우는, 누구나 AX·DX 전환을 함께하는 모두의 커뮤니티입니다.
         </p>
       </header>
 
@@ -87,11 +87,11 @@ export default function AboutPage() {
         </h2>
         <div className="card space-y-3 text-base leading-relaxed md:p-6 md:text-lg">
           <p className="font-medium text-brand-800">
-            &ldquo;내 AI 하네스 자랑하고 주접 받으며 배우는, 누구나 AX·DX 전환을 함께하는 모두의 커뮤니티.&rdquo;
+            &ldquo;내 AI 하네스 자랑하고 응원 받으며 배우는, 누구나 AX·DX 전환을 함께하는 모두의 커뮤니티.&rdquo;
           </p>
           <p className="text-[color:var(--color-ink-600)]">
             만든 사람은 자랑할 곳이 필요하고, 배우려는 사람은 따라 할 살아있는 구조가
-            필요합니다. 우하귀는 두 집단을 한 공간에 두고, K-밈의 주접 문화를 축으로 삼아
+            필요합니다. 우하귀는 두 집단을 한 공간에 두고, K-밈의 응원 문화를 축으로 삼아
             기술 디테일을 애정 언어로 흐르게 만듭니다.
           </p>
         </div>

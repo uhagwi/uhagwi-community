@@ -56,9 +56,9 @@ export function Sidebar({
       </div>
 
       <div className="card space-y-3">
-        <h2 className="text-sm font-semibold text-brand-800">주접 요약</h2>
+        <h2 className="text-sm font-semibold text-brand-800">응원 요약</h2>
         <div className="flex items-center justify-between">
-          <span className="text-xs text-[color:var(--color-ink-600)]">평균 주접지수</span>
+          <span className="text-xs text-[color:var(--color-ink-600)]">평균 응원지수</span>
           <JuzzepBadge score={juzzepAvg} />
         </div>
         <div className="space-y-1 text-xs text-[color:var(--color-ink-600)]">
@@ -79,7 +79,7 @@ export function Sidebar({
       </div>
 
       <div className="card space-y-3">
-        <h2 className="text-sm font-semibold text-brand-800">이 하네스 주접 놓기</h2>
+        <h2 className="text-sm font-semibold text-brand-800">이 하네스 응원 남기기</h2>
         <JuzzepReactions
           harnessId={harness.id}
           initial={harness.reaction_counts}

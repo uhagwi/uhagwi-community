@@ -1,5 +1,5 @@
 /**
- * JuzzepReactions — 주접 리액션 4종 버튼 (❤️ 🔥 🙇 🤌)
+ * JuzzepReactions — 응원 리액션 4종 버튼 (❤️ 🔥 🙇 🤌)
  * 근거: docs/service-dev/02_design/ui.md §4-2 · api.md §2-4
  *
  * - 클릭 시 낙관적 업데이트 → POST /api/reactions → 서버 응답으로 동기화
@@ -159,7 +159,7 @@ export function JuzzepReactions({
     <div className={className}>
       <div
         role="group"
-        aria-label="주접 리액션"
+        aria-label="응원 리액션"
         aria-describedby={error ? errId : undefined}
         className={`flex flex-wrap ${sizeClasses}`}
       >

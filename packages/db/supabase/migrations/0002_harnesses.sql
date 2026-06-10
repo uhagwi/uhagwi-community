@@ -70,7 +70,7 @@ create table if not exists harnesses (
   persona_job       text,
   media_urls        text[] not null default '{}',
   view_count        integer not null default 0,    -- 배치로 flush
-  avg_juzzep        numeric(5,2),                  -- 주접지수 평균 (댓글 트리거 갱신)
+  avg_juzzep        numeric(5,2),                  -- 응원지수 평균 (댓글 트리거 갱신)
   trending_score    numeric(10,2) not null default 0,
   created_at        timestamptz not null default now(),
   updated_at        timestamptz not null default now(),
@@ -87,4 +87,4 @@ alter table harnesses enable row level security;
 comment on table harnesses is '하네스 본체 · posts 1:1';
 comment on column harnesses.components is '11요소 배열 (tools/memory/prompt/context/tone/...)';
 comment on column harnesses.view_count is 'Redis counter → 1분 배치 flush';
-comment on column harnesses.avg_juzzep is '주접지수 평균 · 댓글 insert 트리거로 rolling avg';
+comment on column harnesses.avg_juzzep is '응원지수 평균 · 댓글 insert 트리거로 rolling avg';

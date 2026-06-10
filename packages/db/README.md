@@ -96,7 +96,7 @@ pnpm db:stop    # 컨테이너 정지 (데이터는 보존)
 | `users` | 사용자 (Discord 1:1) | `discord_id` UK, `handle` UK (3~20자), role ∈ {member,builder,operator} |
 | `posts` | 콘텐츠 래퍼 | status ∈ {draft,published,featured,reported,deleted}, visibility ∈ {public,link,private} |
 | `harnesses` | 하네스 본체 | `post_id` FK(unique), components `text[]` GIN 인덱스 |
-| `comments` | 주접 댓글 | body 1~1000자, `juzzep_score` 0~100 |
+| `comments` | 응원 댓글 | body 1~1000자, `juzzep_score` 0~100 |
 | `reactions` | 4종 리액션 | `reaction_type` enum, (harness_id,user_id,type) UK |
 | `tags` / `harness_tags` | 태그 | `(harness_id,tag_id)` PK 복합 |
 | `imports` | 이식 기록 | target ∈ {claude,chatgpt,n8n,zapier,other}, status ∈ {initiated,succeeded,failed} |

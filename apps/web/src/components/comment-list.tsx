@@ -1,8 +1,8 @@
 /**
- * CommentList — 주접 댓글 리스트
+ * CommentList — 응원 댓글 리스트
  * 근거: docs/service-dev/02_design/ui.md §2-3, §3-5 JuzzepComment
  *
- * 각 댓글: 아바타 + handle + 본문 + 주접지수 게이지(0~100, 핫핑크) + 작성 시각.
+ * 각 댓글: 아바타 + handle + 본문 + 응원지수 게이지(0~100, 핫핑크) + 작성 시각.
  * Phase 2: DbComment(Supabase) 직접 수신 — avatar_url 우선, 없으면 이모지 fallback.
  */
 import Image from 'next/image';
@@ -34,13 +34,13 @@ export function CommentList({ comments, currentUserId }: CommentListProps) {
   if (comments.length === 0) {
     return (
       <p className="text-sm text-[color:var(--color-ink-600)]">
-        아직 주접이 없어요. 첫 주접의 주인공이 되어주세요 🤌
+        아직 응원이 없어요. 첫 응원의 주인공이 되어주세요 🤌
       </p>
     );
   }
 
   return (
-    <ul className="space-y-4" aria-label={`주접 댓글 ${comments.length}개`}>
+    <ul className="space-y-4" aria-label={`응원 댓글 ${comments.length}개`}>
       {comments.map((comment) => {
         const handle = comment.author?.handle ?? '익명';
         const displayName = comment.author?.display_name ?? '익명의 누군가';
@@ -104,7 +104,7 @@ export function CommentList({ comments, currentUserId }: CommentListProps) {
   );
 }
 
-// 주접지수 게이지 — 핫핑크 0~100 시각화
+// 응원지수 게이지 — 핫핑크 0~100 시각화
 function JuzzepGauge({ score }: { score: number }) {
   const clamped = Math.max(0, Math.min(100, Math.round(score)));
   return (
@@ -114,7 +114,7 @@ function JuzzepGauge({ score }: { score: number }) {
       aria-valuenow={clamped}
       aria-valuemin={0}
       aria-valuemax={100}
-      aria-label={`주접지수 ${clamped}`}
+      aria-label={`응원지수 ${clamped}`}
     >
       <div
         className="h-full bg-juzzep-500 transition-all"

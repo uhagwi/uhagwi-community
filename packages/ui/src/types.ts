@@ -5,5 +5,5 @@ export const REACTION_META: Record<ReactionType, { emoji: string; label: string 
   heart: { emoji: '❤️', label: '조각이다' },
   fire: { emoji: '🔥', label: '불탄다' },
   bow: { emoji: '🙇', label: '영접합니다' },
-  pinch: { emoji: '🤌', label: '주접' },
+  pinch: { emoji: '🤌', label: '응원' },
 };
