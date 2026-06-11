@@ -191,7 +191,7 @@ export const ANALYZE_THEME_PROMPT = `당신은 우하귀(Uhagwi)의 테마별 �
   "auto_candidates": [
     {
       "rank": 1,
-      "category": "daily | weekly | one_time | social",
+      "category": "daily | weekly | monthly | one_time | social",
       "title": "자동화 후보 제목",
       "domain": "도메인",
       "why": "왜 이 사람에게 이 테마에서 톱N인지 1~2문장",

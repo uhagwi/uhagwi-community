@@ -13,6 +13,7 @@ const CREATURE_EMOJI: Record<Phase4Result['creature_type'], string> = {
 const CATEGORY_LABEL: Record<Phase4Candidate['category'], { emoji: string; label: string }> = {
   daily: { emoji: '🔥', label: '매일' },
   weekly: { emoji: '🌱', label: '매주' },
+  monthly: { emoji: '🗓️', label: '매월' },
   one_time: { emoji: '📦', label: '단발성' },
   social: { emoji: '🌐', label: '외부·SNS' },
 };
@@ -37,6 +38,7 @@ export function AutomationDistillCard({ result }: Props) {
   const grouped: Record<Phase4Candidate['category'], Phase4Candidate[]> = {
     daily: [],
     weekly: [],
+    monthly: [],
     one_time: [],
     social: [],
   };

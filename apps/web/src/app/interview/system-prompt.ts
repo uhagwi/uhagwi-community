@@ -195,7 +195,7 @@ export const INTERVIEW_ANALYZE_PROMPT = `당신은 우하귀(Uhagwi)의 페르�
   "auto_candidates": [
     {
       "rank": 1,
-      "category": "daily | weekly | one_time | social",
+      "category": "daily | weekly | monthly | one_time | social",
       "title": "자동화 후보 제목 (예: 시험문제 출제 자동화)",
       "domain": "도메인 (예: 교육·교사)",
       "why": "이 사람에게 왜 톱N인지 1~2문장 (대화 근거 인용 권장)",

@@ -64,7 +64,8 @@ export const Phase4ResultSchema = z.object({
     .array(
       z.object({
         rank: z.number().int().min(1).max(10),
-        category: z.enum(['daily', 'weekly', 'one_time', 'social']),
+        // Phase 2 tasks의 monthly가 후보로 넘어오므로 enum 정합 필수 (누락 시 500)
+        category: z.enum(['daily', 'weekly', 'monthly', 'one_time', 'social']),
         title: z.string().min(2).max(80),
         domain: z.string().min(2).max(40),
         why_user_chose: z.string().min(10).max(400),
@@ -90,7 +91,7 @@ export const ThemeAnalyzeResultSchema = z.object({
     .array(
       z.object({
         rank: z.number().int().min(1).max(10),
-        category: z.enum(['daily', 'weekly', 'one_time', 'social']),
+        category: z.enum(['daily', 'weekly', 'monthly', 'one_time', 'social']),
         title: z.string().min(2).max(80),
         domain: z.string().min(2).max(40),
         why: z.string().min(10).max(400),
@@ -128,7 +129,7 @@ export const AnalyzeResultSchema = z.object({
     .array(
       z.object({
         rank: z.number().int().min(1).max(15),
-        category: z.enum(['daily', 'weekly', 'one_time', 'social']),
+        category: z.enum(['daily', 'weekly', 'monthly', 'one_time', 'social']),
         title: z.string().min(2).max(80),
         domain: z.string().min(2).max(40),
         why: z.string().min(10).max(400),

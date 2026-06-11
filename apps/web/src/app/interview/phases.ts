@@ -33,7 +33,7 @@ export type Phase2Result = {
 // Phase 4 결과 타입
 export type Phase4Candidate = {
   rank: number;
-  category: 'daily' | 'weekly' | 'one_time' | 'social';
+  category: 'daily' | 'weekly' | 'monthly' | 'one_time' | 'social';
   title: string;
   domain: string;
   why_user_chose: string;
@@ -253,7 +253,7 @@ Phase 2의 모든 업무를 자동화로 옮기는 게 아니라, 사용자 욕�
   "auto_candidates": [
     {
       "rank": 1,
-      "category": "daily | weekly | one_time | social",
+      "category": "daily | weekly | monthly | one_time | social",
       "title": "자동화 후보 제목",
       "domain": "도메인",
       "why_user_chose": "사용자가 Phase 3에서 이 업무를 고른 이유 (인용)",

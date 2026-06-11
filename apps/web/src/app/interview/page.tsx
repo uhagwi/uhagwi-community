@@ -84,7 +84,7 @@ export default function InterviewPage() {
               <LoadingCard
                 emoji="🔬"
                 title="업무 분석 중…"
-                detail="Opus 4.7이 Phase 1 인터뷰를 깊이 분석하고 있어요. 30~60초 걸려요."
+                detail="AI가 Phase 1 인터뷰를 깊이 분석하고 있어요. 30~60초 걸려요."
               />
             ) : state.phase2Result ? (
               <TaskRecommendCard result={state.phase2Result} onAdvance={advanceToPhase3} />
@@ -114,7 +114,7 @@ export default function InterviewPage() {
               <LoadingCard
                 emoji="🎯"
                 title="자동화 후보 도출 중…"
-                detail="Opus 4.7이 Phase 1+2+3 통합해 자동화 후보를 정제하고 있어요."
+                detail="AI가 Phase 1+2+3을 통합해 자동화 후보를 정제하고 있어요. 30~60초 걸려요."
               />
             ) : state.phase4Result ? (
               <AutomationDistillCard result={state.phase4Result} />
